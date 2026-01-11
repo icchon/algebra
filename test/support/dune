@@ -1,0 +1,6 @@
+(include_subdirs no)
+
+(library
+ (name test_support)
+ (libraries str)
+ (wrapped false))

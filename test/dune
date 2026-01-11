@@ -1,0 +1,8 @@
+(include_subdirs unqualified)
+
+(alias
+ (name runtest)
+ (deps
+  (alias numeric/runtest)
+  (alias matrix/runtest)
+  (alias poly/runtest)))

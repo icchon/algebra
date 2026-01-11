@@ -1,0 +1,146 @@
+(include_subdirs no)
+
+(executables
+ (names
+  test_complex
+  test_integer
+  test_natural
+  ;   test_octonion
+  ;   test_quaternion
+  test_rational
+  test_q_root2
+  test_q_root23
+  test_q_rootp
+  test_q_cube_rootp
+  test_q_octonion
+  ;   test_sedenion
+  )
+ (modes byte)
+ (libraries test_support types))
+
+;; mode promote を追加することで、_build からソースツリーへ自動コピーされる
+
+(rule
+ (targets test_complex.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_complex.exe))))
+
+(rule
+ (targets test_integer.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_integer.exe))))
+
+(rule
+ (targets test_natural.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_natural.exe))))
+
+; (rule
+;  (targets test_octonion.tex)
+;  (mode
+;   (promote (until-clean)))
+;  (action
+;   (with-stdout-to
+;    %{targets}
+;    (run ./test_octonion.exe))))
+
+; (rule
+;  (targets test_quaternion.tex)
+;  (mode
+;   (promote (until-clean)))
+;  (action
+;   (with-stdout-to
+;    %{targets}
+;    (run ./test_quaternion.exe))))
+
+(rule
+ (targets test_rational.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_rational.exe))))
+
+(rule
+ (targets test_q_root2.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_q_root2.exe))))
+
+(rule
+ (targets test_q_root23.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_q_root23.exe))))
+
+(rule
+ (targets test_q_rootp.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_q_rootp.exe))))
+
+(rule
+ (targets test_q_cube_rootp.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_q_cube_rootp.exe))))
+
+(rule
+ (targets test_q_octonion.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_q_octonion.exe))))
+
+; (rule
+;  (targets test_sedenion.tex)
+;  (mode
+;   (promote (until-clean)))
+;  (action
+;   (with-stdout-to
+;    %{targets}
+;    (run ./test_sedenion.exe))))
+
+(alias
+ (name runtest)
+ (deps
+  test_complex.tex
+  test_integer.tex
+  test_natural.tex
+  ;   test_octonion.tex
+  ;   test_quaternion.tex
+  test_rational.tex
+  test_q_root2.tex
+  test_q_root23.tex
+  test_q_rootp.tex
+  test_q_cube_rootp.tex
+  test_q_octonion.tex
+  ;   test_sedenion.tex
+  ))

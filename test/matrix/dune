@@ -1,0 +1,12 @@
+(include_subdirs no)
+
+(executables
+ (names test_matrix_com)
+ (modes byte)
+ (libraries test_support types))
+
+(rule
+ (alias runtest)
+ (deps test_matrix_com.exe)
+ (action
+  (run %{exe:test_matrix_com.exe})))

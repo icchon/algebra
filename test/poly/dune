@@ -1,0 +1,19 @@
+(include_subdirs no)
+
+(executables
+ (names test_cardano_solver)
+ (modes byte)
+ (libraries test_support types))
+
+(rule
+ (targets test_cardano_solver.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_cardano_solver.exe))))
+
+(alias
+ (name runtest)
+ (deps test_cardano_solver.tex))
