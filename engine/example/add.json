@@ -1,0 +1,6 @@
+{
+  "action": "binary",
+  "id": "C",
+  "op": "add",
+  "args": ["A", "B"]
+}

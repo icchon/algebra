@@ -36,3 +36,5 @@ val div : t -> t -> t
 val of_int : Integer.t -> t
 val cubic_root : t -> t option
 val square_root : t -> t option
+
+val of_yojson: Yojson.Safe.t -> t

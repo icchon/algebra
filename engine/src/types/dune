@@ -3,4 +3,4 @@
 (library
  (name types)
  (modules :standard)
- (libraries str))
+ (libraries str yojson))

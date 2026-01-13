@@ -33,6 +33,21 @@ module BASE = struct
     match (find_root n, find_root d) with
     | Some rn, Some rd -> Some (rn, rd)
     | _ -> None
+  let parse_string s = 
+    match String.split_on_char '/' s with
+    | [n] -> (int_of_string n, 1)
+    | [n; d] -> 
+    let d_int = int_of_string d in
+    if d_int = 0 then failwith "Division by zero"
+    else (int_of_string n, d_int)
+    | _ -> failwith ("invalid rational format: " ^ s)
+
+  let of_yojson json = 
+    match json with 
+    | `String s -> parse_string s 
+    | `Int i -> (i, 1)
+    | `List [`Int n; `Int d] -> (n, d)
+    | _ -> failwith "Invalid rational format"
 end
 
 include BASE
