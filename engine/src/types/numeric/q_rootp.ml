@@ -7,11 +7,14 @@ module DynamicNumber = struct
   type t = { terms : RationalField.t CoeffMap.t }
 
   let zero = { terms = CoeffMap.empty }
+  let derive _ = zero
   let one = { terms = CoeffMap.singleton PrimeSet.empty RationalField.one }
   let is_zero x = CoeffMap.is_empty x.terms
 
   let cleanup x =
-    { terms = CoeffMap.filter (fun _ c -> not (RationalField.is_zero c)) x.terms }
+    {
+      terms = CoeffMap.filter (fun _ c -> not (RationalField.is_zero c)) x.terms;
+    }
 
   let make_rational r =
     if RationalField.is_zero r then zero
@@ -89,7 +92,9 @@ module DynamicNumber = struct
       mul num den
     else
       let abs_n = abs n in
-      let r_sqrt = mul (make_root (abs_n * d)) (make_rational (RationalField.v (1, d))) in
+      let r_sqrt =
+        mul (make_root (abs_n * d)) (make_rational (RationalField.v (1, d)))
+      in
       let i = make_root (-1) in
       mul i r_sqrt
 
@@ -122,6 +127,7 @@ module DynamicNumber = struct
     let module LocalRule = struct
       type coeff = RationalField.t
       type basis = PrimeSet.t
+
       let all = idx_to_basis
       let size = size
       let to_int b = BasisMap.find b b_to_idx
@@ -140,7 +146,8 @@ module DynamicNumber = struct
     { terms = !res_terms }
 
   let get_rational_part x =
-    CoeffMap.find_opt PrimeSet.empty x.terms |> Option.value ~default:RationalField.zero
+    CoeffMap.find_opt PrimeSet.empty x.terms
+    |> Option.value ~default:RationalField.zero
 
   let to_rational_opt x =
     if CoeffMap.is_empty x.terms then Some RationalField.zero
@@ -154,15 +161,17 @@ module DynamicNumber = struct
   let analyze_structure x =
     let bases = CoeffMap.bindings x.terms |> List.map fst in
     let is_rational_basis b = PrimeSet.is_empty b in
-    
+
     (* Case 1: 有理数のみ *)
     if List.for_all is_rational_basis bases then
       Some (get_rational_part x, RationalField.zero, 1)
     else
       (* Case 2, 3, 4: a + b*root(p) の形かチェック *)
-      let complex_bases = List.filter (fun b -> not (is_rational_basis b)) bases in
+      let complex_bases =
+        List.filter (fun b -> not (is_rational_basis b)) bases
+      in
       match complex_bases with
-      | [basis] ->
+      | [ basis ] ->
           (* basisに含まれる素数の積を p とする *)
           let p = PrimeSet.fold ( * ) basis 1 in
           let u = get_rational_part x in
@@ -185,13 +194,17 @@ module DynamicNumber = struct
         (fun p ->
           List.iter
             (fun q ->
-              let candidates = [ RationalField.v (p, q); RationalField.v (-p, q) ] in
+              let candidates =
+                [ RationalField.v (p, q); RationalField.v (-p, q) ]
+              in
               List.iter
                 (fun t ->
                   if not (List.exists (RationalField.equal t) !roots) then
                     let t2 = RationalField.mul t t in
                     let t3 = RationalField.mul t2 t in
-                    let res = RationalField.(add (add (mul a t3) (mul b t)) c) in
+                    let res =
+                      RationalField.(add (add (mul a t3) (mul b t)) c)
+                    in
                     if RationalField.is_zero res then roots := t :: !roots)
                 candidates)
             q_candidates)
@@ -203,10 +216,10 @@ module DynamicNumber = struct
     let p_q = RationalField.of_int p in
     let a = RationalField.mul (RationalField.of_int 4) p_q in
     let b = RationalField.mul (RationalField.of_int 3) (get_rational_part n) in
-    let c = RationalField.neg v in (* v は有理数係数 *)
-    
-    if RationalField.is_zero a then []
-    else solve_cubic_rational a b c
+    let c = RationalField.neg v in
+    (* v は有理数係数 *)
+
+    if RationalField.is_zero a then [] else solve_cubic_rational a b c
 
   let rec square_root x =
     let x = cleanup x in
@@ -218,24 +231,29 @@ module DynamicNumber = struct
     | None -> (
         match analyze_structure x with
         (* 変数名 u_val, v_val に変更して RationalField.v との衝突を回避 *)
-        | Some (u_val, v_val, p) when p <> 1 ->
+        | Some (u_val, v_val, p) when p <> 1 -> (
             (* u + v*root(p) の平方根 *)
             (* u^2 - p*v^2 *)
-            let d2 = RationalField.(sub (mul u_val u_val) (mul (of_int p) (mul v_val v_val))) in
+            let d2 =
+              RationalField.(
+                sub (mul u_val u_val) (mul (of_int p) (mul v_val v_val)))
+            in
             let d2_dyn = make_rational d2 in
-            (match square_root d2_dyn with
+            match square_root d2_dyn with
             | None -> None
-            | Some d ->
+            | Some d -> (
                 (* s^2 = (u + d)/2, t^2 = (u - d)/2 等の公式 *)
                 let half = make_rational (RationalField.v (1, 2)) in
                 let s2_cand1 = mul (add (make_rational u_val) d) half in
                 let s2_cand2 = mul (add (make_rational u_val) (neg d)) half in
-                
+
                 let try_s2 s2 =
                   match square_root s2 with
                   | Some s when not (is_zero s) ->
                       (* t = v / (2s) *)
-                      let t = mul (make_rational v_val) (inv (mul (of_int 2) s)) in
+                      let t =
+                        mul (make_rational v_val) (inv (mul (of_int 2) s))
+                      in
                       let root_p = make_root p in
                       let res = add s (mul t root_p) in
                       if equal (mul res res) x then Some res
@@ -247,30 +265,32 @@ module DynamicNumber = struct
                 in
                 match try_s2 s2_cand1 with
                 | Some r -> Some r
-                | None -> try_s2 s2_cand2)
+                | None -> try_s2 s2_cand2))
         | _ -> None)
 
   let rec cubic_root x =
     let x = cleanup x in
     match analyze_structure x with
-    | Some (u, _, 1) -> 
+    | Some (u, _, 1) -> (
         (* Case 1: 有理数 *)
-        (match RationalField.cubic_root u with
+        match RationalField.cubic_root u with
         | Some k -> Some (make_rational k)
         | None -> None)
-        
-    | Some (u_val, v_val, p) ->
+    | Some (u_val, v_val, p) -> (
         (* Case 2, 3, 4: 一般の u + v*root(p) *)
         (* ノルム N = u^2 - p*v^2 を計算 *)
-        let norm_val = RationalField.(sub (mul u_val u_val) (mul (of_int p) (mul v_val v_val))) in
+        let norm_val =
+          RationalField.(
+            sub (mul u_val u_val) (mul (of_int p) (mul v_val v_val)))
+        in
         let norm_dyn = make_rational norm_val in
-        
+
         (* ノルムの3乗根 n を求める *)
-        (match cubic_root norm_dyn with
+        match cubic_root norm_dyn with
         | Some n ->
             (* 補助方程式 4pt^3 + 3nt - v = 0 の有理数解 t を探す *)
             let t_candidates = solve_auxiliary_equation p n v_val in
-            
+
             let rec try_candidates = function
               | [] -> None
               | t :: rest -> (
@@ -291,7 +311,6 @@ module DynamicNumber = struct
             in
             try_candidates t_candidates
         | None -> None)
-        
     | None -> None
 
   let is_atomic s =
@@ -348,26 +367,47 @@ module DynamicNumber = struct
   let conj x = x
   let to_string _ = "not implemented"
 
+  let compare x y = CoeffMap.compare RationalField.compare x.terms y.terms
+
+  let is_negative x =
+    match CoeffMap.max_binding_opt x.terms with
+    | Some (_, c) -> RationalField.is_negative c
+    | None -> false
+
   include Add_monoid.Extend (struct
     type nonrec t = t
+
     let zero, equal, add = (zero, equal, add)
   end)
+
   include Add_group.Extend (struct
     type nonrec t = t
+
     let neg, add = (neg, add)
   end)
+
   include Mul_monoid.Extend (struct
     type nonrec t = t
+
     let one, mul, equal = (one, mul, equal)
   end)
+
   include Mul_group.Extend (struct
     type nonrec t = t
+
     let inv, mul = (inv, mul)
   end)
+
   include Division_ring.Extend (struct
     type nonrec t = t
+
     let pow, inv, mul = (pow, inv, mul)
   end)
+
+  let is_one x =
+    match CoeffMap.bindings x.terms with
+    | [ (basis, c) ] when PrimeSet.is_empty basis -> RationalField.is_one c
+    | _ -> false
 end
 
 include DynamicNumber

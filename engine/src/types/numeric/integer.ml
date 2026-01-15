@@ -9,11 +9,15 @@ module BASE = struct
   let quo = ( / )
   let rem = ( mod )
   let comp = compare
+  let compare = comp
   let equal x y = comp x y = 0
+  (* let is_negative x = x < 0 *)
+  (* let is_one x = x = 1 *)
   let conj x = x
   let to_string x = string_of_int x
   let to_string_latex x = string_of_int x
   let v x = x
+  let derive _ = zero
 
   let get_divisors n =
     let n = abs n in

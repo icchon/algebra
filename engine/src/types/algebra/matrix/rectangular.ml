@@ -7,6 +7,12 @@ module Make (S : Ring.S) (M : Dim.S) (N : Dim.S) = struct
   module AL = Add_lift.Extend (S) (Core)
   include AL
 
+  include Add_monoid.Extend (struct
+    type nonrec t = t
+
+    let zero, add, equal = (AL.zero, AL.add, AL.equal)
+  end)
+
   include Add_group.Extend (struct
     type nonrec t = t
 

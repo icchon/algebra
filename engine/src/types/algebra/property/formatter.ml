@@ -36,7 +36,20 @@ module GenLinear (C : Config) (S : STRUCTURE with type coeff := C.t) = struct
             let is_neg = C.is_negative c in
             let abs_c = if is_neg then C.neg c else c in
             let c_str = to_s abs_c in
-            let term = if b <> "" && C.is_one abs_c then b else c_str ^ b in
+
+            let term =
+              if b <> "" && C.is_one abs_c then b
+              else
+                let needs_paren = b <> "" && String.contains c_str ' ' in
+                let c_part =
+                  if needs_paren then
+                    if is_latex then "\\left(" ^ c_str ^ "\\right)"
+                    else "(" ^ c_str ^ ")"
+                  else c_str
+                in
+                c_part ^ b
+            in
+
             let op =
               if is_first then if is_neg then "-" else ""
               else if is_neg then " - "

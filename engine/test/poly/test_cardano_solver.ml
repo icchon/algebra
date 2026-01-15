@@ -14,6 +14,8 @@ module Q_coeff = struct
   let is_negative x =
     let s = to_string_latex x in
     String.length s > 0 && s.[0] = '-'
+
+  let compare = compare
 end
 
 module P = Polynomial.Make (Q_coeff)

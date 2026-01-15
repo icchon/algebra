@@ -13,6 +13,10 @@
   test_q_rootp
   test_q_cube_rootp
   test_q_octonion
+  test_rat_polynomial
+  test_rat_poly_fraction
+  test_exponential
+  test_logarithm
   ;   test_sedenion
   )
  (modes byte)
@@ -119,6 +123,42 @@
    %{targets}
    (run ./test_q_octonion.exe))))
 
+(rule
+ (targets test_rat_polynomial.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_rat_polynomial.exe))))
+
+(rule
+ (targets test_rat_poly_fraction.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_rat_poly_fraction.exe))))
+
+(rule
+ (targets test_exponential.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_exponential.exe))))
+
+(rule
+ (targets test_logarithm.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_logarithm.exe))))
+
 ; (rule
 ;  (targets test_sedenion.tex)
 ;  (mode
@@ -142,5 +182,9 @@
   test_q_rootp.tex
   test_q_cube_rootp.tex
   test_q_octonion.tex
+  test_rat_polynomial.tex
+  test_rat_poly_fraction.tex
+  test_exponential.tex
+  test_logarithm.tex
   ;   test_sedenion.tex
   ))

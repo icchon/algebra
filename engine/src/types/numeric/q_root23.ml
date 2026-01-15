@@ -22,6 +22,8 @@ module EF = Extension_field.Make (Rational) (Q23Basis)
 include EF
 include Q23Basis
 
+let derive _ = zero
+
 let basis_to_string b =
   match b with Unit -> "" | Sqrt2 -> "√2" | Sqrt3 -> "√3" | Sqrt6 -> "√6"
 

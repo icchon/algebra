@@ -27,8 +27,8 @@ let adds s = latex_outputs := !latex_outputs @ [ s ]
 (* latex_reporter.ml *)
 
 (* 特殊文字をエスケープするか、数式を保護する *)
-let section s = adds (sprintf "\\section*{%s}" s)
-let subsection s = adds (sprintf "\\subsection*{%s}" s)
+let section s = adds (sprintf "%% SECTION: %s" s)
+let subsection s = adds (sprintf "%% SUBSECTION: %s" s)
 (* let section _ = print_endline ""
 let subsection _ = print_endline "" *)
 (* let adds s = add_latex_string s *)
@@ -50,6 +50,14 @@ let sub x y = sprintf "%s - %s" (paren_if_needed x) (paren_if_needed y)
 let mul x y = sprintf "%s \\cdot %s" (paren_if_needed x) (paren_if_needed y)
 let gcd x y = sprintf "\\gcd(%s, %s)" (paren_if_needed x) (paren_if_needed y)
 let div x y = sprintf "%s \\div %s" (paren_if_needed x) (paren_if_needed y)
+
+let quo x y =
+  sprintf "\\mathrm{quo}(%s, %s)" (paren_if_needed x) (paren_if_needed y)
+
+let rem x y =
+  sprintf "\\mathrm{rem}(%s, %s)" (paren_if_needed x) (paren_if_needed y)
+
+let compose f g = sprintf "%s \\circ %s" (paren_if_needed f) (paren_if_needed g)
 let pow base exp = sprintf "%s^{%s}" (paren base) exp
 let transpose x = pow x "-1"
 let star x = pow x "*"
@@ -76,6 +84,7 @@ let div_scalar s x =
 
 let neg x = sprintf "-%s" (paren x)
 let det x = sprintf "\\det\\left( %s \\right)" (paren_if_needed x)
+let diff x = sprintf "\\frac{d}{dx} \\left( %s \\right)" x
 (* latex_reporter.ml に以下を追加 *)
 
 (* 既存のコードに追加 *)
@@ -104,6 +113,8 @@ let mathbb s = sprintf "\\mathbb{%s}" s
 (* 累乗根: \sqrt[n]{x} *)
 let root_n n x = sprintf "\\sqrt[%d]{%s}" n x
 let root x = sprintf "\\sqrt{%s}" x
+let exp x = sprintf "e^{%s}" x
+let log x = sprintf "\\log %s" x
 
 (* 複合演算の等式: 左辺 = 右辺 *)
 let eq_raw left right = sprintf "\\[ %s = %s \\]" left right
@@ -119,5 +130,5 @@ let get_full_latex_document () =
      \\geometry{a4paper, margin=1in}\n\
      \\begin{document}\n"
   in
-  let footer = "\\end{document}\n" in
+  let footer = "\n\\end{document}\n" in
   header ^ String.concat "\n" !latex_outputs ^ footer

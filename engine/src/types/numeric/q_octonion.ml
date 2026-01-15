@@ -70,6 +70,8 @@ module EF = Extension_field.Make (Rational) (OctonionBasis)
 include EF
 include OctonionBasis
 
+let derive _ = zero
+
 let basis_to_string b =
   match b with
   | Unit -> ""

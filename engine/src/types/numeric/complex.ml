@@ -5,6 +5,7 @@ module BASE = struct
     type leaf = Rational.t
 
     let flatten (x : t) : leaf list = [ x ]
+    let compare = Rational.compare
   end
 
   module CD =
@@ -18,6 +19,10 @@ module BASE = struct
 
   include CD
 
+  let compare (re1, im1) (re2, im2) =
+    let c = S.compare re1 re2 in
+    if c <> 0 then c else S.compare im1 im2
+
   include
     Cayley_dickson.InvExtend
       (S)
@@ -29,6 +34,9 @@ module BASE = struct
       end)
 
   let v x = x
+  let derive _ = zero
+  (* let is_negative _ = false *)
+  (* let is_one (re, im) = S.is_one re && S.is_zero im *)
 end
 
 include BASE

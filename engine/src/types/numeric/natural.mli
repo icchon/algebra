@@ -2,6 +2,7 @@ type t = int
 
 val equal : t -> t -> bool
 val comp : t -> t -> int
+val compare : t -> t -> int
 val to_string : t -> string
 val to_string_latex : t -> string
 val to_string_latex_level : int -> t -> string
@@ -24,3 +25,4 @@ val is_zero : t -> bool
 val pow : t -> int -> t
 val pow_non_neg : t -> int -> t
 val v : t -> t
+val derive : t -> t

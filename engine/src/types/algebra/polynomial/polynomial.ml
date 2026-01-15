@@ -12,6 +12,8 @@ module Make (Coeff : sig
   val to_string_latex_level : int -> t -> string
   val is_negative : t -> bool
   val is_one : t -> bool
+  val derive : t -> t
+  val compare : t -> t -> int
 end) =
 struct
   type coeff = Coeff.t
@@ -23,19 +25,36 @@ struct
       else if Coeff.equal p.(i) Coeff.zero then find_last (i - 1)
       else i
     in
+
     let last = find_last (Array.length p - 1) in
+
     if last = -1 then [||]
     else if last = Array.length p - 1 then p
     else Array.sub p 0 (last + 1)
+
+  let compare p1 p2 =
+    let l1, l2 = (Array.length p1, Array.length p2) in
+    if l1 <> l2 then Stdlib.compare l1 l2
+    else
+      let rec aux i =
+        if i >= l1 then 0
+        else
+          let c = Coeff.compare p1.(i) p2.(i) in
+          if c <> 0 then c else aux (i + 1)
+      in
+      aux 0
 
   let degree p = Array.length p - 1
   let map_coeff f p = Array.map f p |> normalize
 
   let lift2_coeff f p1 p2 =
     let l1, l2 = (Array.length p1, Array.length p2) in
+
     Array.init (max l1 l2) (fun i ->
         let c1 = if i < l1 then p1.(i) else Coeff.zero in
+
         let c2 = if i < l2 then p2.(i) else Coeff.zero in
+
         f c1 c2)
     |> normalize
 
@@ -44,6 +63,29 @@ struct
   let one = pure Coeff.one
   let add p1 p2 = lift2_coeff Coeff.add p1 p2
   let neg p = Array.map Coeff.neg p
+
+  let derive p =
+    let len = Array.length p in
+    (* 1. Derive coefficients: sum( a_i' * x^i ) *)
+    let term1 = map_coeff Coeff.derive p in
+    (* 2. Power rule: sum( a_i * i * x^(i-1) ) *)
+    let term2 =
+      if len <= 1 then zero
+      else
+        let new_arr = Array.make (len - 1) Coeff.zero in
+        for i = 0 to len - 2 do
+          (* new_arr.(i) corresponds to x^i. Source was x^(i+1). Coeff was p.(i+1). Multiplier is i+1. *)
+          new_arr.(i) <- Coeff.times p.(i + 1) (i + 1)
+        done;
+        normalize new_arr
+    in
+    add term1 term2
+
+  let is_negative p =
+    let len = Array.length p in
+    if len = 0 then false else Coeff.is_negative p.(len - 1)
+
+  let abs p = if is_negative p then neg p else p
 
   let equal p1 p2 =
     let l1, l2 = (Array.length p1, Array.length p2) in

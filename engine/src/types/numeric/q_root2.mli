@@ -29,3 +29,4 @@ val gcd_ext: t -> t -> t*t*t *)
 val inv : t -> t
 val div : t -> t -> t
 val from_array : Coeff.t array -> t
+val derive : t -> t

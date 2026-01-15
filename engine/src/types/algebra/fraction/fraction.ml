@@ -3,6 +3,8 @@ module Make (Coeff : sig
   include Formatter.Config with type t := t
 
   val abs : t -> t
+  val derive : t -> t
+  val compare : t -> t -> int
 end) =
 struct
   type coeff = Coeff.t
@@ -23,12 +25,22 @@ struct
   let neg (n, d) = (Coeff.neg n, d)
   let conj (n, d) = normalize (Coeff.conj n, Coeff.conj d)
 
+  let derive (n, d) =
+    let n' = Coeff.derive n in
+    let d' = Coeff.derive d in
+    let new_n = Coeff.sub (Coeff.mul n' d) (Coeff.mul n d') in
+    let new_d = Coeff.mul d d in
+    normalize (new_n, new_d)
+
+  let is_negative (n, _) = Coeff.is_negative n
+
   let add (n1, d1) (n2, d2) =
     normalize (Coeff.add (Coeff.mul n1 d2) (Coeff.mul n2 d1), Coeff.mul d1 d2)
 
   let mul (n1, d1) (n2, d2) = normalize (Coeff.mul n1 n2, Coeff.mul d1 d2)
   let inv (n, d) = normalize (d, n)
   let equal (n1, d1) (n2, d2) = Coeff.equal (Coeff.mul n1 d2) (Coeff.mul n2 d1)
+  let compare (n1, d1) (n2, d2) = Coeff.compare (Coeff.mul n1 d2) (Coeff.mul n2 d1)
 
   module AM = Add_monoid.Extend (struct
     type nonrec t = t

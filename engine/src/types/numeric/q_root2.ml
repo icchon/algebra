@@ -3,6 +3,7 @@ module BASE = struct
   module Poly = Polynomial.Make (Coeff)
   include Poly
 
+  let derive _ = zero
   let min_poly = [| Coeff.of_int (-2); Coeff.zero; Coeff.one |]
 
   let mul a b =

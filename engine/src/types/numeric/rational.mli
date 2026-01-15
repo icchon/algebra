@@ -2,6 +2,7 @@ type t = int * int
 
 val equal : t -> t -> bool
 val comp : t -> t -> int
+val compare : t -> t -> int
 val to_string : t -> string
 val to_string_latex : t -> string
 val to_string_latex_level : int -> t -> string
@@ -37,4 +38,5 @@ val of_int : Integer.t -> t
 val cubic_root : t -> t option
 val square_root : t -> t option
 
-val of_yojson: Yojson.Safe.t -> t
+val of_yojson : Yojson.Safe.t -> t
+val derive : t -> t

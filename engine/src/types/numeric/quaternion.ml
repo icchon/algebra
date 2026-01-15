@@ -6,6 +6,7 @@ module BASE = struct
     type leaf = Complex.leaf
 
     let flatten = Complex.flatten
+    let compare = Complex.compare
   end
 
   module CD =
@@ -23,6 +24,10 @@ module BASE = struct
 
   include CD
 
+  let compare (q1, q2) (q3, q4) =
+    let c = S.compare q1 q3 in
+    if c <> 0 then c else S.compare q2 q4
+
   include
     Cayley_dickson.InvExtend
       (S)
@@ -34,6 +39,9 @@ module BASE = struct
       end)
 
   let v x = x
+  let derive _ = zero
+  (* let is_negative _ = false *)
+  (* let is_one (q1, q2) = S.is_one q1 && S.is_zero q2 *)
 end
 
 include BASE

@@ -3,6 +3,7 @@ type t = e Container.Tup2.t
 type leaf = Rational.t
 
 val equal : t -> t -> bool
+val compare : t -> t -> int
 val to_string : t -> string
 val to_string_latex : t -> string
 val to_string_latex_level : int -> t -> string
@@ -24,6 +25,7 @@ val sub : t -> t -> t
 val inv : t -> t
 val div : t -> t -> t
 val flatten : t -> leaf list
+val derive : t -> t
 
 type s = Rational.t
 
