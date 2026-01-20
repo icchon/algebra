@@ -227,7 +227,9 @@ module DynamicNumber = struct
     | Some q -> (
         match RationalField.square_root q with
         | Some k -> Some (make_rational k)
-        | None -> None)
+        | None ->
+            let res = make_root_rat q in
+            if equal (mul res res) x then Some res else None)
     | None -> (
         match analyze_structure x with
         (* 変数名 u_val, v_val に変更して RationalField.v との衝突を回避 *)
@@ -370,9 +372,9 @@ module DynamicNumber = struct
   let compare x y = CoeffMap.compare RationalField.compare x.terms y.terms
 
   let is_negative x =
-    match CoeffMap.max_binding_opt x.terms with
-    | Some (_, c) -> RationalField.is_negative c
-    | None -> false
+    match CoeffMap.bindings x.terms with
+    | [ (basis, c) ] when PrimeSet.is_empty basis -> RationalField.is_negative c
+    | _ -> false
 
   include Add_monoid.Extend (struct
     type nonrec t = t

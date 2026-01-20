@@ -1,231 +1,425 @@
 open Yojson.Safe.Util
-module StringMap = Map.Make (String)
 
-type pure_scalar =
-  | Rational
-  | Quadratic
-  | Cubic
-  | Quaternion
-  | Octonion
-  | Sedenion
-  | Polynomial
-  | PolynomialFraction
+(* LinearE Implementation *)
+module LinearE = struct
+  type coeff = int * int
 
-type element = Scalar of pure_scalar | Matrix of element | Vector of element
-type env = { main_element : element; sub_element : element option }
-type unary_op = Neg | Inv
-type binary_op = Add | Sub | Mul | Div | Pow
+  (* [n; d] -> (n, d) *)
+  let decode_coeff json =
+    let l = to_list json in
+    (to_int (List.nth l 0), to_int (List.nth l 1))
 
-type command =
-  | Define of { id : string; layer : int; value : Yojson.Safe.t }
-  | UnaryOp of { id : string; op : unary_op; args : string }
-  | BinaryOp of { id : string; op : binary_op; args : string * string }
-  | Eval of { id : string; poly_id : string; target_id : string }
-  | Print of { id : string }
-  | Clear
+  (* { left: [...], right: [...] } -> (left_coeffs, right_coeffs) *)
+  let decode_input json =
+    let left = json |> member "left" |> to_list |> List.map decode_coeff in
+    let right = json |> member "right" |> to_list |> List.map decode_coeff in
+    (left, right)
 
-let decode_unary_op = function
-  | "neg" -> Neg
-  | "inv" -> Inv
-  | s -> failwith ("Unknown unary operation: " ^ s)
+  let solve (left : coeff list) (right : coeff list) =
+    let sub (n1, d1) (n2, d2) = Types.Rational.sub (n1, d1) (n2, d2) in
+    
+    (* Handle variable length lists *)
+    let len_l = List.length left in
+    let len_r = List.length right in
+    let max_len = max len_l len_r in
+    
+    let pad l len = l @ List.init (len - List.length l) (fun _ -> (0, 1)) in
+    
+    let l_pad = pad left max_len in
+    let r_pad = pad right max_len in
+    
+    (* (left - right) = 0 *)
+    let combined = List.map2 sub l_pad r_pad in
+    
+    let degree = List.length combined - 1 in
+    
+    if degree > 3 then
+      [] (* Not implemented for degree > 3 *)
+    else
+      let padded_coeffs = pad combined 4 in
+      let coeffs = Array.of_list padded_coeffs in
+      
+      let d = coeffs.(0) in (* Constant term *)
+      let c = coeffs.(1) in (* x^1 *)
+      let b = coeffs.(2) in (* x^2 *)
+      let a = coeffs.(3) in (* x^3 *)
 
-let decode_binary_op = function
-  | "add" -> Add
-  | "sub" -> Sub
-  | "mul" -> Mul
-  | "div" -> Div
-  | "pow" -> Pow
-  | s -> failwith ("Unknown binary operation: " ^ s)
-
-let decode_command json =
-  match json |> member "action" |> to_string with
-  | "define" ->
-      Define
-        {
-          id = json |> member "id" |> to_string;
-          layer = json |> member "layer" |> to_int;
-          value = json |> member "value";
-        }
-  | "unary" ->
-      UnaryOp
-        {
-          id = json |> member "id" |> to_string;
-          op = json |> member "op" |> to_string |> decode_unary_op;
-          args = json |> member "args" |> to_string;
-        }
-  | "binary" ->
-      let arg_list = json |> member "args" |> to_list in
-      BinaryOp
-        {
-          id = json |> member "id" |> to_string;
-          op = json |> member "op" |> to_string |> decode_binary_op;
-          args =
-            (to_string (List.nth arg_list 0), to_string (List.nth arg_list 1));
-        }
-  | "eval" ->
-      Eval
-        {
-          id = json |> member "id" |> to_string;
-          poly_id = json |> member "poly_id" |> to_string;
-          target_id = json |> member "target_id" |> to_string;
-        }
-  | "print" -> Print { id = json |> member "id" |> to_string }
-  | "clear" -> Clear
-  | action -> failwith ("Unknown action: " ^ action)
-
-let rec decode_element json =
-  let t = json |> member "type" |> to_string in
-  match t with
-  | "Matrix" -> Matrix (decode_element (member "element" json))
-  | "Vector" -> Vector (decode_element (member "element" json))
-  | "Rational" -> Scalar Rational
-  | "Quadratic" -> Scalar Quadratic
-  | "Cubic" -> Scalar Cubic
-  | "Quaternion" -> Scalar Quaternion
-  | "Octonion" -> Scalar Octonion
-  | "Sedenion" -> Scalar Sedenion
-  | "Polynomial" -> Scalar Polynomial
-  | "PolynomialFraction" -> Scalar PolynomialFraction
-  | _ -> failwith ("Unkonw type: " ^ t)
-
-(* let rec element_to_string = function
-  | Scalar Rational           -> "Rational"
-  | Scalar Quadratic          -> "Quadratic"
-  | Scalar Cubic              -> "Cubic"
-  | Scalar Quaternion         -> "Quaternion"
-  | Scalar Octonion           -> "Octonion"
-  | Scalar Sedenion           -> "Sedenion"
-  | Scalar Polynomial         -> "Polynomial"
-  | Scalar PolynomialFraction -> "PolynomialFraction"
-  | Matrix e -> Printf.sprintf "Matrix(%s)" (element_to_string e)
-  | Vector e -> Printf.sprintf "Vector(%s)" (element_to_string e) *)
-
-let decode_env json =
-  let layers = json |> member "layers" |> to_list in
-  {
-    main_element = decode_element (List.nth layers 0);
-    sub_element =
-      (if List.length layers > 1 then Some (decode_element (List.nth layers 1))
-       else None);
-  }
-
-let parse_env_str json_str = Yojson.Safe.from_string json_str |> decode_env
-
-let parse_command_str json_str =
-  Yojson.Safe.from_string json_str |> decode_command
-
-type ('m, 's) engine_state = {
-  main_vars : 'm StringMap.t;
-  sub_vars : 's StringMap.t;
-}
-
-module type ALGEBRA = sig
-  type t
-
-  val of_yojson : Yojson.Safe.t -> t
-  val to_string_latex : t -> string
-  val to_string : t -> string
-  val add : t -> t -> t
-  val sub : t -> t -> t
-  val mul : t -> t -> t
-  val inv : t -> t
+      Types.Cardano_solver.solve_cubic_raw a b c d
 end
 
-type ('m, 's) algebra_pkg = {
-  main_alg : (module ALGEBRA with type t = 'm);
-  sub_alg : (module ALGEBRA with type t = 's) option;
-}
+(* Helper to print full LaTeX document *)
+let print_full_latex content =
+  Printf.printf "\\documentclass[12pt]{article}\n";
+  Printf.printf "\\usepackage[utf8]{inputenc}\n";
+  Printf.printf "\\usepackage{amsmath}\n";
+  Printf.printf "\\usepackage{amssymb}\n";
+  Printf.printf "\\usepackage{geometry}\n";
+  Printf.printf "\\geometry{a4paper, margin=1in}\n";
+  Printf.printf "\\begin{document}\n";
+  Printf.printf "%s\n" content;
+  Printf.printf "\\end{document}\n";
+  flush Stdlib.stdout
 
-type any_algebra = Alg : (module ALGEBRA with type t = 'a) -> any_algebra
+let wrap_align content =
+  Printf.sprintf "\\begin{align*}\n%s\n\\end{align*}" content
 
-let get_algebra_from_element element : any_algebra =
-  match element with
-  | Scalar Rational -> Alg (module Types.Rational)
-  | _ -> Alg (module Types.Rational)
+let wrap_equation content =
+  Printf.sprintf "\\begin{equation*}\n%s\n\\end{equation*}" content
 
-let step (type m s) (pkg : (m, s) algebra_pkg) (state : (m, s) engine_state) cmd
-    =
-  match cmd with
-  | Define { id; layer; value } -> (
-      if layer = 0 then
-        let (module M) = pkg.main_alg in
-        let v = M.of_yojson value in
-        ( { state with main_vars = StringMap.add id v state.main_vars },
-          "Defined " ^ id )
-      else
-        match pkg.sub_alg with
-        | Some (module S) ->
-            let v = S.of_yojson value in
-            ( { state with sub_vars = StringMap.add id v state.sub_vars },
-              "Defined " ^ id )
-        | None -> failwith "No sub layer defined")
-  | BinaryOp { id; op; args = l, r } ->
-      let (module M) = pkg.main_alg in
-      let v1 = StringMap.find l state.main_vars in
-      let v2 = StringMap.find r state.main_vars in
-      let res =
-        match op with
-        | Add -> M.add v1 v2
-        | Sub -> M.sub v1 v2
-        | Mul -> M.mul v1 v2
-        | _ -> failwith "Op not supported yet"
-      in
-      ( { state with main_vars = StringMap.add id res state.main_vars },
-        M.to_string_latex res )
-  | Print { id } ->
-      let (module M) = pkg.main_alg in
-      let v = StringMap.find id state.main_vars in
-      (state, M.to_string_latex v)
-  | _ -> (state, "Command not fully implemented")
-
-let run (type m s) (pkg : (m, s) algebra_pkg) =
-  let state = ref { main_vars = StringMap.empty; sub_vars = StringMap.empty } in
-
-  let execute_line current_state line =
-    let line = String.trim line in
-    if line = "" then current_state
-    else if line.[0] = '{' then (
-      try
-        let cmd = parse_command_str line in
-        let next_state, tex = step pkg current_state cmd in
-        Printf.printf "{\"latex\": \"%s\"}\n" tex;
-        flush stdout;
-        next_state
-      with e ->
-        Printf.printf "{\"error\": \"JSON: %s\"}\n" (Printexc.to_string e);
-        current_state)
+(* LinearE Runner *)
+module LinearERunner = struct
+  let coeffs_to_latex coeffs =
+    let terms = List.mapi (fun i (n, d) ->
+      if n = 0 then "" else
+      let c_val = Types.Rootp_poly_fraction.RootP.make_rational (n, d) in
+      let c_str = Types.Q_cube_rootp.to_string_latex (Types.Q_cube_rootp.of_q_rootp c_val) in
+      let var_part = if i = 0 then "" else if i = 1 then "x" else Printf.sprintf "x^{%d}" i in
+      if c_str = "1" && i > 0 then var_part
+      else if c_str = "-1" && i > 0 then "-" ^ var_part
+      else if String.contains c_str '/' then Printf.sprintf "\\left( %s \\right)%s" c_str var_part
+      else c_str ^ var_part
+    ) coeffs in
+    let valid = List.filter ((<>) "") terms in
+    if valid = [] then "0"
     else
-      try
-        let ic = open_in line in
-        let content = really_input_string ic (in_channel_length ic) in
-        close_in ic;
+      let rec join is_first list =
+        match list with
+        | [] -> ""
+        | t :: ts ->
+            let prefix = 
+              if is_first then (if t.[0] = '-' then "-" else "")
+              else (if t.[0] = '-' then " - " else " + ")
+            in
+            let body = if t.[0] = '-' || t.[0] = '+' then String.sub t 1 (String.length t - 1) else t in
+            prefix ^ body ^ join false ts
+      in join true valid
 
-        let cmd = parse_command_str content in
-        let next_state, tex = step pkg current_state cmd in
-        Printf.printf "{\"latex\": \"%s\"}\n" tex;
-        flush stdout;
-        next_state
-      with e ->
-        Printf.printf "{\"error\": \"File processing error (%s): %s\"}\n" line
-          (Printexc.to_string e);
-        flush stdout;
-        current_state
+  let run () =
+    try
+      while true do
+        let line = read_line () |> String.trim in
+        if line <> "" then
+          try
+            let json_str =
+              if line.[0] = '{' then
+                line
+              else
+                let ic = open_in line in
+                let content = really_input_string ic (in_channel_length ic) in
+                close_in ic;
+                content
+            in
+            let json = Yojson.Safe.from_string json_str in
+            let (left, right) = LinearE.decode_input json in
+            let solutions = LinearE.solve left right in
+            
+            let left_latex = coeffs_to_latex left in
+            let right_latex = coeffs_to_latex right in
+            
+            (* Calculate normalized form *)
+            let sub (n1, d1) (n2, d2) = Types.Rational.sub (n1, d1) (n2, d2) in
+            let len_l = List.length left in
+            let len_r = List.length right in
+            let max_len = max len_l len_r in
+            let pad l len = l @ List.init (len - List.length l) (fun _ -> (0, 1)) in
+            let l_pad = pad left max_len in
+            let r_pad = pad right max_len in
+            let combined = List.map2 sub l_pad r_pad in
+            let norm_latex = coeffs_to_latex combined in
+
+            let solutions_line =
+              if solutions = [] then
+                let degree = List.length combined - 1 in
+                if degree > 3 then
+                  "\\implies \\text{not implemented for degree > 3}"
+                else
+                  "\\implies x \\in \\emptyset"
+              else
+                let sols_formatted = List.mapi (fun i sol ->
+                  Printf.sprintf "x_{ %d } = %s" (i + 1) (Types.Q_cube_rootp.to_string_latex sol)
+                ) solutions in
+                Printf.sprintf "\\implies \\left\\{ %s \\right\\}" (String.concat ", " sols_formatted)
+            in
+
+            let lines = 
+              if right_latex = "0" then
+                [ Printf.sprintf "%s &= 0" left_latex; solutions_line ]
+              else
+                [ Printf.sprintf "%s &= %s" left_latex right_latex;
+                  Printf.sprintf "\\iff %s &= 0" norm_latex;
+                  solutions_line ]
+            in
+            
+            print_full_latex (wrap_align (String.concat "\\\\\n" lines))
+          with e ->
+             print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e))
+      done
+    with End_of_file -> ()
+end
+
+(* LinearDE Implementation *)
+module LinearDE = struct
+  open Types.Linear_de_solver
+  module RootP = Types.Rootp_poly_fraction.RootP
+  module Poly = Types.Rootp_poly_fraction.RootP_polynomial
+  module C = Types.Q_cube_rootp.CubicNumber
+
+  let decode_rational json =
+    let l = to_list json in
+    (to_int (List.nth l 0), to_int (List.nth l 1))
+
+  let decode_rootp json =
+    let r = decode_rational json in
+    RootP.make_rational r
+
+  let decode_poly json =
+    let coeffs = json |> to_list |> List.map decode_rootp |> Array.of_list in
+    Poly.from_array coeffs
+
+  let decode_forcing_term json =
+    let poly_json = json |> member "poly" in
+    let alpha_json = json |> member "alpha" in
+    {
+      poly = decode_poly poly_json;
+      alpha = C.of_q_rootp (decode_rootp alpha_json);
+    }
+
+  let decode_input json =
+    let coeffs = json |> member "coeffs" |> to_list |> List.map decode_rootp |> Array.of_list in
+    let forcing = json |> member "forcing" |> to_list |> List.map decode_forcing_term in
+    { coeffs; forcing }
+
+  let needs_parens s =
+    let s = String.trim s in
+    if s = "" then false else
+    let has_plus = String.contains s '+' in
+    let has_minus = 
+      try 
+        let i = String.index s '-' in 
+        i > 0 (* Minus not at the start *)
+      with Not_found -> false 
+    in
+    has_plus || has_minus
+
+  let lhs_to_latex coeffs =
+    let terms = Array.mapi (fun i c ->
+      let c_str = Types.Rootp_poly_fraction.RootP.to_string_latex c in
+      if c_str = "0" then "" else
+      let deriv = match i with 0 -> "y" | 1 -> "y'" | 2 -> "y''" | 3 -> "y'''" | k -> Printf.sprintf "y^{(%d)}" k in
+      if c_str = "1" then deriv
+      else if c_str = "-1" then "-" ^ deriv
+      else if needs_parens c_str then Printf.sprintf "\\left( %s \\right)%s" c_str deriv
+      else c_str ^ deriv
+    ) coeffs |> Array.to_list in
+    let valid = List.filter ((<>) "") terms in
+    if valid = [] then "0"
+    else
+      let rec join is_first list =
+        match list with
+        | [] -> ""
+        | t :: ts ->
+            let prefix = if is_first then (if t.[0] = '-' then "-" else "") else (if t.[0] = '-' then " - " else " + ") in
+            let body = if t.[0] = '-' || t.[0] = '+' then String.sub t 1 (String.length t - 1) else t in
+            prefix ^ body ^ join false ts
+      in join true (List.rev valid)
+
+  let rhs_to_latex forcing =
+    let terms = List.map (fun {poly; alpha} ->
+      let p_str = Poly.to_string_latex poly in
+      let a_str = C.to_string_latex alpha in
+      let exp_part = if a_str = "0" then "" else if a_str = "1" then "e^x" else Printf.sprintf "e^{%sx}" a_str in
+      if p_str = "0" then "0"
+      else if p_str = "1" then (if exp_part = "" then "1" else exp_part)
+      else if exp_part = "" then p_str
+      else if needs_parens p_str then Printf.sprintf "\\left( %s \\right)%s" p_str exp_part
+      else p_str ^ exp_part
+    ) forcing in
+    if terms = [] then "0" else String.concat " + " terms
+
+  let run () =
+    try
+      while true do
+        let line = read_line () |> String.trim in
+        if line <> "" then
+          try
+            let json_str =
+              if line.[0] = '{' then
+                line
+              else
+                let ic = open_in line in
+                let content = really_input_string ic (in_channel_length ic) in
+                close_in ic;
+                content
+            in
+            let json = Yojson.Safe.from_string json_str in
+            let eq = decode_input json in
+            let sol = solve eq in
+            let rhs_tex = to_string_latex_full sol in
+            
+            let lhs = lhs_to_latex eq.coeffs in
+            let rhs = rhs_to_latex eq.forcing in
+            
+            let lines =
+              [ Printf.sprintf "%s &= %s" lhs rhs;
+                Printf.sprintf "y(x) &= %s" rhs_tex ]
+            in
+            print_full_latex (wrap_align (String.concat "\\\\\n" lines))
+          with e ->
+            print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e))
+      done
+    with End_of_file -> ()
+end
+
+(* Integral Implementation *)
+module Integral = struct
+  open Types.Rootp_frac_exp
+  module Frac = Types.Rootp_poly_fraction
+  module Poly = Types.Rootp_poly_fraction.RootP_polynomial
+  module RootP = Types.Rootp_poly_fraction.RootP
+  module LogInt = Types.Rootp_poly_log
+
+  type method_type = 
+    | Exp of Types.Rootp_frac_exp.term list
+    | Log of (Poly.t * Poly.t) list
+
+  (* Reuse decoding logic *)
+  let decode_rational json =
+    let l = to_list json in
+    (to_int (List.nth l 0), to_int (List.nth l 1))
+
+  let decode_rootp json =
+    let r = decode_rational json in
+    RootP.make_rational r
+
+  let decode_poly json =
+    let coeffs = json |> to_list |> List.map decode_rootp |> Array.of_list in
+    Poly.from_array coeffs
+
+  let decode_frac json =
+    let num_json = json |> member "num" in
+    let den_json = json |> member "den" in
+    let num = decode_poly num_json in
+    let den = decode_poly den_json in
+    Frac.v (num, den)
+
+  (* Exp method term: coeff (fraction), exponent (poly) *)
+  let decode_term_exp json =
+    let coeff_json = json |> member "coeff" in
+    let exp_json = json |> member "exponent" in
+    {
+      coeff = decode_frac coeff_json;
+      exponent = decode_poly exp_json;
+    }
+
+  (* Log method term: coeff (poly), argument (poly) *)
+  let decode_term_log json =
+    let coeff_json = json |> member "coeff" in
+    let arg_json = json |> member "argument" in
+    (decode_poly coeff_json, decode_poly arg_json)
+
+  let decode_input json =
+    let m_str = json |> member "method" |> to_string_option |> Option.value ~default:"exp" in
+    let terms_list = json |> member "terms" |> to_list in
+    match m_str with
+    | "exp" -> Exp (List.map decode_term_exp terms_list)
+    | "log" -> Log (List.map decode_term_log terms_list)
+    | _ -> failwith ("Unknown integral method: " ^ m_str)
+
+  let needs_parens s =
+    let s = String.trim s in
+    if s = "" then false else
+    let has_plus = String.contains s '+' in
+    let has_minus = 
+      try let i = String.index s '-' in i > 0
+      with Not_found -> false 
+    in
+    has_plus || has_minus
+
+  let terms_to_latex_exp terms =
+    let parts = List.map (fun {coeff; exponent} -> 
+      let c_str = Frac.to_string_latex coeff in
+      let e_str = Poly.to_string_latex exponent in
+      let e_part = if e_str = "0" then "" else if e_str = "1" then "e^x" else Printf.sprintf "e^{%s}" e_str in
+      if c_str = "1" then (if e_part = "" then "1" else e_part)
+      else if e_part = "" then c_str
+      else if needs_parens c_str then Printf.sprintf "\\left( %s \\right)%s" c_str e_part
+      else c_str ^ e_part
+    ) terms in
+    String.concat " + " parts
+
+  let terms_to_latex_log terms =
+    let parts = List.map (fun (c, arg) ->
+      let c_str = Poly.to_string_latex c in
+      let a_str = Poly.to_string_latex arg in
+      let c_part = 
+        if c_str = "1" then "" 
+        else if c_str = "-1" then "-"
+        else if needs_parens c_str then Printf.sprintf "\\left( %s \\right) " c_str
+        else c_str ^ " "
+      in
+      Printf.sprintf "%s\\log\\left( %s \\right)" c_part a_str
+    ) terms in
+    String.concat " + " parts
+
+  let run () =
+    try
+      while true do
+        let line = read_line () |> String.trim in
+        if line <> "" then
+          try
+            let json_str =
+              if line.[0] = '{' then
+                line
+              else
+                let ic = open_in line in
+                let content = really_input_string ic (in_channel_length ic) in
+                close_in ic;
+                content
+            in
+            let json = Yojson.Safe.from_string json_str in
+            
+            match decode_input json with
+            | Exp terms ->
+                let res = integrate terms in
+                let full_tex =
+                  if res.nonelementary <> [] then "\\text{non elementary}"
+                  else to_string_latex res.elementary
+                in
+                let integrand = terms_to_latex_exp terms in
+                print_full_latex (wrap_equation (Printf.sprintf "\\int \\left( %s \\right) dx = %s" integrand full_tex))
+            
+            | Log terms ->
+                let res = LogInt.integrate_expr terms in
+                let full_tex = LogInt.to_string_latex res in
+                let integrand = terms_to_latex_log terms in
+                print_full_latex (wrap_equation (Printf.sprintf "\\int \\left( %s \\right) dx = %s" integrand full_tex))
+
+          with e ->
+            print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e))
+      done
+    with End_of_file -> ()
+end
+
+(* Entry Point *)
+let () =
+  if Array.length Sys.argv < 2 then
+    failwith "Usage: main <settings_json_file>";
+  
+  let filename = Sys.argv.(1) in
+  let ic = open_in filename in
+  let settings_str = really_input_string ic (in_channel_length ic) in
+  close_in ic;
+
+  let settings_json = Yojson.Safe.from_string settings_str in
+  
+  let mode_str =
+    try settings_json |> member "mode" |> to_string
+    with _ -> "Unknown"
   in
 
-  try
-    while true do
-      state := execute_line !state (read_line ())
-    done
-  with End_of_file -> ()
+  match mode_str with
+  | "LinearE" -> LinearERunner.run ()
+  | "LinearDE" -> LinearDE.run ()
+  | "Integral" | "integral" -> Integral.run ()
+  | _ -> failwith ("Unsupported mode: " ^ mode_str)
 
-let () =
-  let config = parse_env_str Sys.argv.(1) in
-  let (Alg (module Main)) = get_algebra_from_element config.main_element in
-
-  match config.sub_element with
-  | Some sub_el ->
-      let (Alg (module Sub)) = get_algebra_from_element sub_el in
-      run { main_alg = (module Main); sub_alg = Some (module Sub) }
-  | None ->
-      let pkg = { main_alg = (module Main); sub_alg = None } in
-      run pkg

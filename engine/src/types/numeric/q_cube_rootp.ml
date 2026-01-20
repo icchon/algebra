@@ -355,6 +355,26 @@ module CubicNumber = struct
 
   let equal x y = CubicBasisMap.equal Q_rootp.equal x.terms y.terms
 
+  let compare x y =
+    CubicBasisMap.compare Q_rootp.compare x.terms y.terms
+
+  let[@warning "-32"] is_negative x =
+    match CubicBasisMap.bindings x.terms with
+    | [ (basis, c) ] when IdMap.is_empty basis.roots && basis.omega = 0 ->
+        Q_rootp.is_negative c
+    | _ -> false
+
+  let[@warning "-32"] is_one x =
+    match CubicBasisMap.bindings x.terms with
+    | [ (basis, c) ] when IdMap.is_empty basis.roots && basis.omega = 0 ->
+        Q_rootp.is_one c
+    | _ -> false
+
+  let to_string_latex_level _ x = to_string_latex x
+
+  let conj x = x
+  let to_string x = to_string_latex x
+
   include Add_monoid.Extend (struct
     type nonrec t = t
 

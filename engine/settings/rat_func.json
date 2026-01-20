@@ -1,0 +1,12 @@
+{
+  "mode": "Calculator",
+  "algebra": {
+    "kind": "Fraction",
+    "inner": {
+      "kind": "Polynomial",
+      "inner": {
+        "kind": "Rational"
+      }
+    }
+  }
+}

@@ -15,6 +15,12 @@
   test_q_octonion
   test_rat_polynomial
   test_rat_poly_fraction
+  test_rootp_poly_fraction
+  test_cube_rootp_poly_fraction
+  test_rat_poly_exp
+  test_rootp_poly_log
+  test_rootp_frac_exp
+  test_linear_de
   test_exponential
   test_logarithm
   ;   test_sedenion
@@ -142,6 +148,60 @@
    (run ./test_rat_poly_fraction.exe))))
 
 (rule
+ (targets test_rootp_poly_fraction.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_rootp_poly_fraction.exe))))
+
+(rule
+ (targets test_cube_rootp_poly_fraction.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_cube_rootp_poly_fraction.exe))))
+
+(rule
+ (targets test_rat_poly_exp.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_rat_poly_exp.exe))))
+
+(rule
+ (targets test_rootp_poly_log.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_rootp_poly_log.exe))))
+
+(rule
+ (targets test_rootp_frac_exp.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_rootp_frac_exp.exe))))
+
+(rule
+ (targets test_linear_de.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_linear_de.exe))))
+
+(rule
  (targets test_exponential.tex)
  (mode
   (promote (until-clean)))
@@ -184,6 +244,12 @@
   test_q_octonion.tex
   test_rat_polynomial.tex
   test_rat_poly_fraction.tex
+  test_rootp_poly_fraction.tex
+  test_cube_rootp_poly_fraction.tex
+  test_rat_poly_exp.tex
+  test_rootp_poly_log.tex
+  test_rootp_frac_exp.tex
+  test_linear_de.tex
   test_exponential.tex
   test_logarithm.tex
   ;   test_sedenion.tex

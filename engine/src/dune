@@ -1,4 +1,4 @@
 (executable
  (name main)
  (modules main)
- (libraries yojson str types))
+ (libraries yojson str types unix))

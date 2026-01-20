@@ -85,6 +85,31 @@ let div_scalar s x =
 let neg x = sprintf "-%s" (paren x)
 let det x = sprintf "\\det\\left( %s \\right)" (paren_if_needed x)
 let diff x = sprintf "\\frac{d}{dx} \\left( %s \\right)" x
+
+let linear_de coeffs rhs =
+  let n = Array.length coeffs - 1 in
+  let rec build i is_first =
+    if i < 0 then []
+    else
+      let c = coeffs.(i) in
+      if c = "0" then build (i - 1) is_first
+      else
+        let deriv = match i with
+          | 0 -> "y"
+          | 1 -> "y'"
+          | 2 -> "y''"
+          | 3 -> "y'''"
+          | k -> sprintf "y^{(%d)}" k
+        in
+        let abs_c = if String.length c > 0 && c.[0] = '-' then String.sub c 1 (String.length c - 1) else c in
+        let is_neg = String.length c > 0 && c.[0] = '-' in
+        let c_part = if abs_c = "1" then "" else abs_c in
+        let term = c_part ^ deriv in
+        let op = if is_first then (if is_neg then "-" else "") else (if is_neg then " - " else " + ") in
+        (op ^ term) :: build (i - 1) false
+  in
+  let lhs = String.concat "" (build n true) in
+  sprintf "\\begin{dmath*}\n %s = %s \n\\end{dmath*}" (if lhs = "" then "0" else lhs) rhs
 (* latex_reporter.ml に以下を追加 *)
 
 (* 既存のコードに追加 *)

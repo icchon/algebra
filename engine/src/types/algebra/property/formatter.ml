@@ -53,6 +53,7 @@ module GenLinear (C : Config) (S : STRUCTURE with type coeff := C.t) = struct
             let op =
               if is_first then if is_neg then "-" else ""
               else if is_neg then " - "
+              else if String.length term > 0 && term.[0] = '-' then " "
               else " + "
             in
             (op ^ term) :: aux c_rest b_rest false
