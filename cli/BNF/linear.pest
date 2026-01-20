@@ -1,0 +1,11 @@
+
+number = @{ ASCII_DIGIT+ }
+var = { "x" | "X" }
+coeff = { number ~ ("/" ~ number)? }
+power = { var ~ ("^" ~ number)? }
+term = { coeff ~ power | power | coeff }
+sign = { "+" | "-" }
+op = { "+" | "-" }
+expr = { sign? ~ term ~ (op ~ term)* }
+formula = { SOI ~ expr ~ "=" ~ expr ~ EOI }
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

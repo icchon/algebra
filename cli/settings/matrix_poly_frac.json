@@ -1,0 +1,11 @@
+{
+  "mode": "Calculator",
+  "algebra": {
+    "kind": "SquareMatrix",
+    "size": "3",
+    "inner": {
+      "kind": "PolynomialFraction",
+      "inner": { "kind": "Rational" }
+    }
+  }
+}
