@@ -1,0 +1,13 @@
+{
+  "mode": "Calculator",
+  "algebra": {
+    "kind": "SquareMatrix",
+    "size": "3",
+    "inner": {
+      "kind": "Polynomial",
+      "inner": {
+        "kind": "Rational"
+      }
+    }
+  }
+}

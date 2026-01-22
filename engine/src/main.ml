@@ -1,4 +1,6 @@
 open Yojson.Safe.Util
+open Path_resolver
+open Unix
 
 (* LinearE Implementation *)
 module LinearE = struct
@@ -66,6 +68,27 @@ let wrap_align content =
 let wrap_equation content =
   Printf.sprintf "\\begin{equation*}\n%s\n\\end{equation*}" content
 
+let read_json_from_input () =
+  if isatty stdin then
+    (* Interactive mode: read line by line *)
+    let line = read_line () |> String.trim in
+    if line = "" then None
+    else
+      if line.[0] = '{' then
+        Some (Yojson.Safe.from_string line)
+      else
+        let ic = open_in (resolve_path line) in
+        let content = really_input_string ic (in_channel_length ic) in
+        close_in ic;
+        Some (Yojson.Safe.from_string content)
+  else
+    (* Piped input: read one line from stdin *)
+    try
+      let line = read_line () in
+      if String.trim line = "" then None
+      else Some (Yojson.Safe.from_string line)
+    with End_of_file -> None
+
 (* LinearE Runner *)
 module LinearERunner = struct
   let coeffs_to_latex coeffs =
@@ -97,19 +120,9 @@ module LinearERunner = struct
   let run () =
     try
       while true do
-        let line = read_line () |> String.trim in
-        if line <> "" then
-          try
-            let json_str =
-              if line.[0] = '{' then
-                line
-              else
-                let ic = open_in line in
-                let content = really_input_string ic (in_channel_length ic) in
-                close_in ic;
-                content
-            in
-            let json = Yojson.Safe.from_string json_str in
+        match read_json_from_input () with
+        | Some json ->
+          (try
             let (left, right) = LinearE.decode_input json in
             let solutions = LinearE.solve left right in
             
@@ -141,7 +154,7 @@ module LinearERunner = struct
                 Printf.sprintf "\\implies \\left\\{ %s \\right\\}" (String.concat ", " sols_formatted)
             in
 
-            let lines = 
+            let lines =
               if right_latex = "0" then
                 [ Printf.sprintf "%s &= 0" left_latex; solutions_line ]
               else
@@ -152,7 +165,8 @@ module LinearERunner = struct
             
             print_full_latex (wrap_align (String.concat "\\\\\n" lines))
           with e ->
-             print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e))
+            print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e)))
+        | None -> raise End_of_file
       done
     with End_of_file -> ()
 end
@@ -212,8 +226,7 @@ module LinearDE = struct
       else c_str ^ deriv
     ) coeffs |> Array.to_list in
     let valid = List.filter ((<>) "") terms in
-    if valid = [] then "0"
-    else
+    if valid = [] then "0" else
       let rec join is_first list =
         match list with
         | [] -> ""
@@ -239,19 +252,9 @@ module LinearDE = struct
   let run () =
     try
       while true do
-        let line = read_line () |> String.trim in
-        if line <> "" then
-          try
-            let json_str =
-              if line.[0] = '{' then
-                line
-              else
-                let ic = open_in line in
-                let content = really_input_string ic (in_channel_length ic) in
-                close_in ic;
-                content
-            in
-            let json = Yojson.Safe.from_string json_str in
+        match read_json_from_input () with
+        | Some json ->
+          (try
             let eq = decode_input json in
             let sol = solve eq in
             let rhs_tex = to_string_latex_full sol in
@@ -265,7 +268,8 @@ module LinearDE = struct
             in
             print_full_latex (wrap_align (String.concat "\\\\\n" lines))
           with e ->
-            print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e))
+            print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e)))
+        | None -> raise End_of_file
       done
     with End_of_file -> ()
 end
@@ -278,23 +282,22 @@ module Integral = struct
   module RootP = Types.Rootp_poly_fraction.RootP
   module LogInt = Types.Rootp_poly_log
 
-  type method_type = 
-    | Exp of Types.Rootp_frac_exp.term list
-    | Log of (Poly.t * Poly.t) list
+  type integral_term =
+    | IExp of Types.Rootp_frac_exp.term
+    | ILog of (Frac.t * Poly.t)
 
-  (* Reuse decoding logic *)
   let decode_rational json =
     let l = to_list json in
     (to_int (List.nth l 0), to_int (List.nth l 1))
-
+  
   let decode_rootp json =
     let r = decode_rational json in
     RootP.make_rational r
-
+  
   let decode_poly json =
     let coeffs = json |> to_list |> List.map decode_rootp |> Array.of_list in
     Poly.from_array coeffs
-
+  
   let decode_frac json =
     let num_json = json |> member "num" in
     let den_json = json |> member "den" in
@@ -302,28 +305,26 @@ module Integral = struct
     let den = decode_poly den_json in
     Frac.v (num, den)
 
-  (* Exp method term: coeff (fraction), exponent (poly) *)
-  let decode_term_exp json =
-    let coeff_json = json |> member "coeff" in
-    let exp_json = json |> member "exponent" in
-    {
-      coeff = decode_frac coeff_json;
-      exponent = decode_poly exp_json;
-    }
-
-  (* Log method term: coeff (poly), argument (poly) *)
-  let decode_term_log json =
-    let coeff_json = json |> member "coeff" in
-    let arg_json = json |> member "argument" in
-    (decode_poly coeff_json, decode_poly arg_json)
-
-  let decode_input json =
-    let m_str = json |> member "method" |> to_string_option |> Option.value ~default:"exp" in
-    let terms_list = json |> member "terms" |> to_list in
-    match m_str with
-    | "exp" -> Exp (List.map decode_term_exp terms_list)
-    | "log" -> Log (List.map decode_term_log terms_list)
-    | _ -> failwith ("Unknown integral method: " ^ m_str)
+  let decode_input json : integral_term list =
+    let decode_one_term term_json =
+      if member "exponent" term_json <> `Null then
+        IExp {
+          coeff = term_json |> member "coeff" |> decode_frac;
+          exponent = term_json |> member "exponent" |> decode_poly;
+        }
+      else if member "log" term_json <> `Null then
+        ILog (
+          term_json |> member "coeff" |> decode_frac,
+          term_json |> member "log" |> decode_poly
+        )
+      else if member "coeff" term_json <> `Null then
+        IExp {
+          coeff = term_json |> member "coeff" |> decode_frac;
+          exponent = Poly.zero
+        }
+      else failwith "unknown integral term"
+    in
+    json |> member "terms" |> to_list |> List.map decode_one_term
 
   let needs_parens s =
     let s = String.trim s in
@@ -335,67 +336,94 @@ module Integral = struct
     in
     has_plus || has_minus
 
-  let terms_to_latex_exp terms =
-    let parts = List.map (fun {coeff; exponent} -> 
-      let c_str = Frac.to_string_latex coeff in
-      let e_str = Poly.to_string_latex exponent in
-      let e_part = if e_str = "0" then "" else if e_str = "1" then "e^x" else Printf.sprintf "e^{%s}" e_str in
-      if c_str = "1" then (if e_part = "" then "1" else e_part)
-      else if e_part = "" then c_str
-      else if needs_parens c_str then Printf.sprintf "\\left( %s \\right)%s" c_str e_part
-      else c_str ^ e_part
-    ) terms in
-    String.concat " + " parts
-
-  let terms_to_latex_log terms =
-    let parts = List.map (fun (c, arg) ->
-      let c_str = Poly.to_string_latex c in
-      let a_str = Poly.to_string_latex arg in
-      let c_part = 
-        if c_str = "1" then "" 
-        else if c_str = "-1" then "-"
-        else if needs_parens c_str then Printf.sprintf "\\left( %s \\right) " c_str
-        else c_str ^ " "
-      in
-      Printf.sprintf "%s\\log\\left( %s \\right)" c_part a_str
+  let terms_to_latex terms =
+    let parts = List.map (function
+      | IExp {coeff; exponent} ->
+          let c_str = Frac.to_string_latex coeff in
+          let e_str = Poly.to_string_latex exponent in
+          let e_part = if e_str = "0" then "" else if e_str = "1" then "e^x" else Printf.sprintf "e^{%s}" e_str in
+          if c_str = "1" then (if e_part = "" then "1" else e_part)
+          else if e_part = "" then c_str
+          else if needs_parens c_str then Printf.sprintf "\\left( %s \\right)%s" c_str e_part
+          else c_str ^ e_part
+      | ILog (c, arg) ->
+          let c_str = Frac.to_string_latex c in
+          let a_str = Poly.to_string_latex arg in
+          let c_part = 
+            if c_str = "1" then "" 
+            else if c_str = "-1" then "-"
+            else if needs_parens c_str then Printf.sprintf "\\left( %s \\right) " c_str
+            else c_str ^ " "
+          in
+          Printf.sprintf "%s\\log\\left( %s \\right)" c_part a_str
     ) terms in
     String.concat " + " parts
 
   let run () =
     try
       while true do
-        let line = read_line () |> String.trim in
-        if line <> "" then
-          try
-            let json_str =
-              if line.[0] = '{' then
-                line
-              else
-                let ic = open_in line in
-                let content = really_input_string ic (in_channel_length ic) in
-                close_in ic;
-                content
-            in
-            let json = Yojson.Safe.from_string json_str in
+        match read_json_from_input () with
+        | Some json ->
+          (try
+            let terms = decode_input json in
             
-            match decode_input json with
-            | Exp terms ->
-                let res = integrate terms in
-                let full_tex =
-                  if res.nonelementary <> [] then "\\text{non elementary}"
-                  else to_string_latex res.elementary
-                in
-                let integrand = terms_to_latex_exp terms in
-                print_full_latex (wrap_equation (Printf.sprintf "\\int \\left( %s \\right) dx = %s" integrand full_tex))
-            
-            | Log terms ->
-                let res = LogInt.integrate_expr terms in
-                let full_tex = LogInt.to_string_latex res in
-                let integrand = terms_to_latex_log terms in
-                print_full_latex (wrap_equation (Printf.sprintf "\\int \\left( %s \\right) dx = %s" integrand full_tex))
+            let rat_coeffs = terms |> List.filter_map (function IExp {coeff; exponent} when Poly.is_zero exponent -> Some coeff | _ -> None) in
+            let exp_terms = terms |> List.filter_map (function IExp t when not (Poly.is_zero t.exponent) -> Some t | _ -> None) in
+            let log_terms_frac = terms |> List.filter_map (function ILog t -> Some t | _ -> None) in
 
+            let total_rat_func = List.fold_left Frac.add Frac.zero rat_coeffs in
+            let rat_res = Frac.integrate total_rat_func in
+            
+            let exp_res = integrate exp_terms in
+            
+            let poly_log_terms = log_terms_frac |> List.map (fun (c, arg) ->
+              let (num, den) = c in
+              if not (Poly.equal den Poly.one) then
+                failwith "Log term with rational function coefficient not supported yet"
+              else (num, arg)
+            ) in
+            let log_res = LogInt.integrate_expr poly_log_terms in
+
+            let tex_parts = ref [] in
+            let add_part s = if s <> "" && s <> "0" then tex_parts := s :: !tex_parts in
+            
+            add_part (Frac.to_string_latex rat_res.rational_part);
+            add_part (Frac.to_string_latex log_res.rational_part);
+            add_part (terms_to_latex (List.map (fun t -> IExp t) exp_res.elementary));
+            
+            let combined_log_part = LogInt.{
+              rational_part=Frac.zero; 
+              log_part=rat_res.log_part @ log_res.log_part; 
+              poly_log_part=log_res.poly_log_part
+            } in
+            add_part (LogInt.to_string_latex combined_log_part);
+
+            let non_elem_integrand =
+              (if exp_res.nonelementary <> [] then
+                let exp_integrand = List.map (fun t -> IExp t) exp_res.nonelementary in
+                [terms_to_latex exp_integrand]
+              else []) @
+              (if not (Frac.is_zero rat_res.remaining_square_free) then 
+                [Frac.to_string_latex rat_res.remaining_square_free] 
+              else [])
+            in
+            
+            let final_tex = String.concat " + " (List.rev !tex_parts) in
+            let full_tex =
+              let elementary_part = if final_tex = "" then "0" else final_tex in
+              if non_elem_integrand <> [] then
+                let integrand_str = String.concat " + " non_elem_integrand in
+                if elementary_part = "0" then Printf.sprintf "\\int %s dx" integrand_str
+                else Printf.sprintf "%s + \\int %s dx" elementary_part integrand_str
+              else
+                elementary_part
+            in
+            
+            let integrand = terms_to_latex terms in
+            print_full_latex (wrap_equation (Printf.sprintf "\\int \\left( %s \\right) dx = %s" integrand full_tex))
           with e ->
-            print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e))
+            print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e)))
+        | None -> raise End_of_file
       done
     with End_of_file -> ()
 end
@@ -405,7 +433,7 @@ let () =
   if Array.length Sys.argv < 2 then
     failwith "Usage: main <settings_json_file>";
   
-  let filename = Sys.argv.(1) in
+  let filename = resolve_path Sys.argv.(1) in
   let ic = open_in filename in
   let settings_str = really_input_string ic (in_channel_length ic) in
   close_in ic;
@@ -422,4 +450,3 @@ let () =
   | "LinearDE" -> LinearDE.run ()
   | "Integral" | "integral" -> Integral.run ()
   | _ -> failwith ("Unsupported mode: " ^ mode_str)
-

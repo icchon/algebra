@@ -1,0 +1,9 @@
+{
+  "mode": "Calculator",
+  "algebra": {
+    "kind": "Polynomial",
+    "inner": {
+      "kind": "Rational"
+    }
+  }
+}

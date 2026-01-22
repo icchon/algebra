@@ -32,8 +32,8 @@ fn parse_line(line: &str) -> Result<Command, CommandParseError> {
     match words[0] {
         "help" => Ok(Command::Help),
         "exit" => Ok(Command::Exit),
-        "switch" if words.len() > 1 => Ok(Command::Switch(words[1].to_string())),
-        "switch" => Err(CommandParseError::InvalidArguments(
+        "mode" if words.len() > 1 => Ok(Command::Switch(words[1].to_string())),
+        "mode" => Err(CommandParseError::InvalidArguments(
             "switch command requires a mode (e.g., 'switch linear')".into(),
         )),
         _ => Ok(Command::Expr(line.to_string())),
@@ -43,17 +43,9 @@ fn parse_line(line: &str) -> Result<Command, CommandParseError> {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut rl = rustyline::DefaultEditor::new()?;
 
-    // --- ここからが大きな変更点 ---
-
-    // 1. 初期セッションを 'linear' モードで開始する
     let mut session = Session::new("linear")?;
 
-    println!("Welcome to ComputorV2!");
-    println!("Default mode: {}", session.parser.name());
-    println!("Type 'switch <mode>', 'help', 'exit', or an expression.");
-
     loop {
-        // 2. プロンプトはセッションのパーサー名から取得
         let prompt = format!("[{}] >> ", session.parser.name());
         let line = match rl.readline(&prompt) {
             Ok(line) => line,
@@ -82,20 +74,17 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Commands: help, exit, switch <mode>");
                 }
                 Command::Switch(mode_name) => {
-                    // 3. 'switch' で新しいセッションを生成する
                     match Session::new(&mode_name) {
                         Ok(new_session) => {
                             session = new_session;
-                            println!("Switched to '{}' mode.", session.parser.name());
+                            // println!("Switched to '{}' mode.", session.parser.name());
                         }
                         Err(e) => eprintln!("Failed to switch mode: {}", e),
                     }
                 }
                 Command::Expr(expr) => {
-                    // 4. 式の評価： parse -> query の2段階プロセス
                     match session.parser.parse(&expr) {
                         Ok(parsed_data) => {
-                            // println!("Parsed data: {}", parsed_data);
                             let line = parsed_data.lines().map(|s| s.trim()).collect::<String>();   
                             println!("{}", line);
                             let result = session.engine.query(&line);

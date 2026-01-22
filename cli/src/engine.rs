@@ -6,7 +6,7 @@ use std::thread;
 
 // 計算を担当するエンジンの実行可能ファイルへのパス。
 // このパスは実際の環境に合わせて修正する必要がある。
-const ENGINE_EXECUTABLE: &str = "./algebra.exe"; // 仮のパス
+const ENGINE_EXECUTABLE: &str = "./algebra";
 
 pub struct Engine {
     child: Child,

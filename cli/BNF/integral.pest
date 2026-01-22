@@ -1,0 +1,30 @@
+
+number = @{ ASCII_DIGIT+ }
+coeff  = { number ~ ("/" ~ number)? }
+sign   = { "+" | "-" }
+op     = { "+" | "-" }
+
+x    = { "x" | "X" }
+x_p  = { x ~ ("^" ~ number)? }
+x_term = { coeff ~ x_p | x_p | coeff }
+x_expr = { sign? ~ x_term ~ (op ~ x_term)* }
+x_block = { "(" ~ x_expr ~ ")" | x_term }
+fraction = { x_block ~ "/" ~ x_block }
+
+frac_expr = { ("(" ~ fraction ~ ")") | fraction | x_block }
+exp_func = { "exp(" ~ x_expr ~ ")" }
+log_func = { "log(" ~ x_expr ~ ")" }
+
+term = {
+    (frac_expr ~ exp_func) | 
+    (frac_expr ~ log_func) | 
+    (exp_func ~ frac_expr) | 
+    (exp_func ~ log_func) |
+    frac_expr | exp_func | log_func
+}
+
+fx = { sign? ~ term ~ (op ~ term)* }
+
+formula = { SOI ~ fx ~ EOI }
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

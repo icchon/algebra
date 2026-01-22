@@ -1,0 +1,10 @@
+{
+  "mode": "Calculator",
+  "algebra": {
+    "kind": "SquareMatrix",
+    "size": "3",
+    "inner": {
+      "kind": "Rational"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+number = @{ ASCII_DIGIT+ }
+coeff  = { number ~ ("/" ~ number)? }
+sign   = { "+" | "-" }
+op     = { "+" | "-" }
+
+d3 = { "y'''" }
+d2 = { "y''" }
+d1 = { "y'" }
+d0 = { "y" }
+y_var = { d3 | d2 | d1 | d0 }
+
+y_term = { coeff? ~ y_var }
+y_expr = { sign? ~ y_term ~ (op ~ y_term)* }
+
+x    = { "x" | "X" }
+x_p  = { x ~ ("^" ~ number)? }
+x_term = { coeff ~ x_p | x_p | coeff }
+x_expr = { sign? ~ x_term ~ (op ~ x_term)* }
+
+exponent = { sign? ~ ( (coeff ~ x) | x | coeff ) }
+exp_func = { "exp(" ~ exponent ~ ")" }
+
+x_block = { "(" ~ x_expr ~ ")" | x_term }
+fx = {
+    (sign? ~ x_block ~ exp_func) 
+    | (sign? ~ exp_func ~ x_block) 
+    | (sign? ~ exp_func) 
+    | x_expr
+}
+
+formula = { SOI ~ y_expr ~ "=" ~ fx ~ EOI }
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

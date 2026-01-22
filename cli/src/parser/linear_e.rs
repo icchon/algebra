@@ -23,7 +23,9 @@ enum LinearEParseError {
     DuplicateDegree,
 }
 
-fn parse_expr_to_vec(expr_pair: pest::iterators::Pair<Rule>) -> Result<Vec<[i32; 2]>, LinearEParseError> {
+fn parse_expr_to_vec(
+    expr_pair: pest::iterators::Pair<Rule>,
+) -> Result<Vec<[i32; 2]>, LinearEParseError> {
     let mut terms_map = HashMap::new();
     let mut max_degree = 0;
     let mut next_sign = 1;
@@ -42,9 +44,11 @@ fn parse_expr_to_vec(expr_pair: pest::iterators::Pair<Rule>) -> Result<Vec<[i32;
                 }
 
                 terms_map.insert(degree, coeff);
-                if degree > max_degree { max_degree = degree; }
-                next_sign = 1; 
-        }
+                if degree > max_degree {
+                    max_degree = degree;
+                }
+                next_sign = 1;
+            }
             _ => {}
         }
     }
@@ -64,7 +68,8 @@ fn extract_term_data(pair: pest::iterators::Pair<Rule>) -> (usize, [i32; 2]) {
             Rule::coeff => {
                 let mut c_inner = inner.into_inner();
                 let num = c_inner.next().unwrap().as_str().parse().unwrap();
-                let den = c_inner.next()
+                let den = c_inner
+                    .next()
                     .map(|n| n.as_str().parse().unwrap())
                     .unwrap_or(1);
                 coeff = [num, den];
@@ -72,7 +77,8 @@ fn extract_term_data(pair: pest::iterators::Pair<Rule>) -> (usize, [i32; 2]) {
             Rule::power => {
                 let mut p_inner = inner.into_inner();
                 p_inner.next();
-                degree = p_inner.next()
+                degree = p_inner
+                    .next()
                     .map(|n| n.as_str().parse().unwrap())
                     .unwrap_or(1);
             }
@@ -85,17 +91,15 @@ fn extract_term_data(pair: pest::iterators::Pair<Rule>) -> (usize, [i32; 2]) {
 fn parse_formula_to_json(input: &str) -> Result<String, String> {
     let pairs = <LinearEParser as pest::Parser<Rule>>::parse(Rule::formula, input)
         .map_err(|e| format!("Syntax Error: {}", e))?;
-    
+
     let formula_pair = pairs.into_iter().next().unwrap();
     let mut inner = formula_pair.into_inner();
 
     let left_pair = inner.next().unwrap();
     let right_pair = inner.next().unwrap();
 
-    let left_vec = parse_expr_to_vec(left_pair)
-        .map_err(|e| format!("{:?}", e))?;
-    let right_vec = parse_expr_to_vec(right_pair)
-        .map_err(|e| format!("{:?}", e))?;
+    let left_vec = parse_expr_to_vec(left_pair).map_err(|e| format!("{:?}", e))?;
+    let right_vec = parse_expr_to_vec(right_pair).map_err(|e| format!("{:?}", e))?;
 
     let out = json!({
         "left": left_vec,

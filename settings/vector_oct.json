@@ -1,0 +1,10 @@
+{
+  "mode": "Calculator",
+  "algebra": {
+    "kind": "Vector",
+    "size": "5",
+    "inner": {
+      "kind": "Octonion"
+    }
+  }
+}

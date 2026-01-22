@@ -1,0 +1,12 @@
+{
+  "mode": "Calculator",
+  "algebra": {
+    "kind": "Polynomial",
+    "inner": { "kind": "Rational" }
+  },
+  "eval_target": {
+    "kind": "SquareMatrix",
+    "size": "3",
+    "inner": { "kind": "Rational" }
+  }
+}
