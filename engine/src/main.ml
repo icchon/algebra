@@ -65,9 +65,6 @@ let print_full_latex content =
 let wrap_align content =
   Printf.sprintf "\\begin{align*}\n%s\n\\end{align*}" content
 
-let wrap_equation content =
-  Printf.sprintf "\\begin{equation*}\n%s\n\\end{equation*}" content
-
 let read_json_from_input () =
   if isatty stdin then
     (* Interactive mode: read line by line *)
@@ -88,6 +85,25 @@ let read_json_from_input () =
       if String.trim line = "" then None
       else Some (Yojson.Safe.from_string line)
     with End_of_file -> None
+
+let smart_join parts =
+  let filtered = List.filter (fun s -> let s = String.trim s in s <> "" && s <> "0") parts in
+  match filtered with
+  | [] -> "0"
+  | hd :: tl ->
+    let hd = String.trim hd in
+    List.fold_left (fun acc part ->
+      let part = String.trim part in
+      if String.length part > 0 && part.[0] = '-' then
+        acc ^ " - " ^ (String.sub part 1 (String.length part - 1))
+      else
+        acc ^ " + " ^ part
+    ) hd tl
+
+let polish_latex str =
+  let str = Str.global_replace (Str.regexp " \\+ -") " - " str in
+  let str = Str.global_replace (Str.regexp " - -") " + " str in
+  str
 
 (* LinearE Runner *)
 module LinearERunner = struct
@@ -247,7 +263,7 @@ module LinearDE = struct
       else if needs_parens p_str then Printf.sprintf "\\left( %s \\right)%s" p_str exp_part
       else p_str ^ exp_part
     ) forcing in
-    if terms = [] then "0" else String.concat " + " terms
+    if terms = [] then "0" else smart_join terms
 
   let run () =
     try
@@ -357,7 +373,7 @@ module Integral = struct
           in
           Printf.sprintf "%s\\log\\left( %s \\right)" c_part a_str
     ) terms in
-    String.concat " + " parts
+    smart_join parts
 
   let run () =
     try
@@ -408,19 +424,33 @@ module Integral = struct
               else [])
             in
             
-            let final_tex = String.concat " + " (List.rev !tex_parts) in
+            let final_tex_parts = List.rev !tex_parts in
+
+            let elementary_part_multiline = match final_tex_parts with
+            | [] -> ""
+            | hd :: tl ->
+                let rest = tl |> List.map (fun s ->
+                    if String.length s > 0 && s.[0] = '-' then
+                        "& " ^ s
+                    else
+                        "& + " ^ s
+                ) |> String.concat " \\\\ " in
+                if rest = "" then hd else hd ^ " \\\\ " ^ rest
+            in
+            
             let full_tex =
-              let elementary_part = if final_tex = "" then "0" else final_tex in
+              let elementary_part = if elementary_part_multiline = "" then "0" else elementary_part_multiline in
               if non_elem_integrand <> [] then
                 let integrand_str = String.concat " + " non_elem_integrand in
                 if elementary_part = "0" then Printf.sprintf "\\int %s dx" integrand_str
-                else Printf.sprintf "%s + \\int %s dx" elementary_part integrand_str
+                else elementary_part ^ " \\\\ & + \\int " ^ integrand_str ^ " dx"
               else
                 elementary_part
             in
             
-            let integrand = terms_to_latex terms in
-            print_full_latex (wrap_equation (Printf.sprintf "\\int \\left( %s \\right) dx = %s" integrand full_tex))
+            let integrand = polish_latex (terms_to_latex terms) in
+            let equation = Printf.sprintf "\\int \\left( %s \\right) dx &= %s" integrand full_tex in
+            print_full_latex (wrap_align (polish_latex equation))
           with e ->
             print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e)))
         | None -> raise End_of_file

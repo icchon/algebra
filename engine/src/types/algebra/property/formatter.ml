@@ -27,20 +27,20 @@ module GenLinear (C : Config) (S : STRUCTURE with type coeff := C.t) = struct
       if is_latex then C.to_string_latex_level level else C.to_string
     in
 
-    let rec aux cs bs is_first =
+    let rec to_parts cs bs acc =
       match (cs, bs) with
-      | [], _ | _, [] -> []
+      | [], _ | _, [] -> List.rev acc
       | c :: c_rest, b :: b_rest ->
-          if c = C.zero then aux c_rest b_rest is_first
+          if c = C.zero then to_parts c_rest b_rest acc
           else
             let is_neg = C.is_negative c in
             let abs_c = if is_neg then C.neg c else c in
             let c_str = to_s abs_c in
 
-            let term =
+            let term_body =
               if b <> "" && C.is_one abs_c then b
               else
-                let needs_paren = b <> "" && String.contains c_str ' ' in
+                let needs_paren = b <> "" && (String.contains c_str ' ' || String.contains c_str '+') in
                 let c_part =
                   if needs_paren then
                     if is_latex then "\\left(" ^ c_str ^ "\\right)"
@@ -49,18 +49,18 @@ module GenLinear (C : Config) (S : STRUCTURE with type coeff := C.t) = struct
                 in
                 c_part ^ b
             in
-
-            let op =
-              if is_first then if is_neg then "-" else ""
-              else if is_neg then " - "
-              else if String.length term > 0 && term.[0] = '-' then " "
-              else " + "
-            in
-            (op ^ term) :: aux c_rest b_rest false
+            to_parts c_rest b_rest ((is_neg, term_body) :: acc)
     in
-    match aux cs bs true with
+    
+    match to_parts cs bs [] with
     | [] -> to_s C.zero
-    | parts -> String.concat "" parts
+    | (is_neg, body) :: rest ->
+        let first = if is_neg && body <> "0" then "-" ^ body else body in
+        List.fold_left (fun acc (is_neg, body) ->
+            if body = "0" then acc 
+            else if is_neg then acc ^ " - " ^ body 
+            else acc ^ " + " ^ body
+        ) first rest
 
   (* 完璧に t -> string のシグネチャを守る *)
   let to_string (x : S.t) : string =
@@ -147,8 +147,8 @@ module Fraction (C : Config) = struct
       else C.to_string abs_n ^ "/" ^ C.to_string d
     in
 
-    (* 負なら外側に "-" を置く *)
-    if is_neg then "-" ^ body else body
+    (* Fraction.build_string は符号を付与しない。呼び出し元が処理する *)
+    body
 
   let to_string x = build_string ~level:0 ~is_latex:false x
   let to_string_latex x = build_string ~level:0 ~is_latex:true x

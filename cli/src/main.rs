@@ -84,9 +84,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     match session.parser.parse(&expr) {
                         Ok(parsed_data) => {
                             let line = parsed_data.lines().map(|s| s.trim()).collect::<String>();   
-                            println!("{}", line);
+                            // println!("{}", line);
                             let result = session.engine.query(&line);
-                            println!("{}", result);
+                            println!("\n\n{}\n\n", result);
                         }
                         Err(e) => eprintln!("Parse Error: {}", e),
                     }
