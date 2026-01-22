@@ -1,7 +1,6 @@
 extern crate pest;
 extern crate pest_derive;
 
-use pest::Parser;
 use pest::iterators::{Pair, Pairs};
 use pest_derive::Parser;
 use serde_json::json;
@@ -12,7 +11,6 @@ use super::ExprParser;
 #[grammar = "BNF/linear_de.pest"]
 pub struct LinearDEParser;
 
-// Helper to parse a coefficient, e.g., "1/2" -> (1, 2) or "3" -> (3, 1)
 fn parse_coeff(pair: Pair<Rule>) -> (i32, i32) {
     let mut numbers = pair.into_inner();
     let n = numbers.next().unwrap().as_str().parse::<i32>().unwrap();
@@ -24,8 +22,6 @@ fn parse_coeff(pair: Pair<Rule>) -> (i32, i32) {
     }
 }
 
-// Helper to parse a y_term, e.g., "2y''" -> (2, (2,1))
-// Returns (degree, coefficient)
 fn parse_y_term(pair: Pair<Rule>) -> (usize, (i32, i32)) {
     let mut inner = pair.into_inner();
     let first = inner.next().unwrap();
@@ -47,7 +43,7 @@ fn parse_y_term(pair: Pair<Rule>) -> (usize, (i32, i32)) {
         Rule::d1 => 1,
         Rule::d2 => 2,
         Rule::d3 => 3,
-        _ => 0, // Should not happen
+        _ => 0, 
     };
 
     (degree, coeff)
@@ -66,11 +62,10 @@ fn parse_y_expr(pairs: Pairs<Rule>) -> Vec<(i32, i32)> {
                 }
             }
             Rule::y_term => {
-                let (degree, (n, d)) = parse_y_term(pair);
+                let (degree, (n, _d)) = parse_y_term(pair);
                 let (num, _den) = terms.entry(degree).or_insert((0, 1));
-                // This is a simplification. A proper fraction addition is needed.
                 *num += n * current_sign;
-                current_sign = 1; // Reset after use
+                current_sign = 1; 
             }
             Rule::op => {
                 if pair.as_str() == "-" {
@@ -93,10 +88,6 @@ fn parse_y_expr(pairs: Pairs<Rule>) -> Vec<(i32, i32)> {
     result
 }
 
-// --- Right-Hand Side (fx) Parsing ---
-
-// Helper for a single x term, e.g., "3x^2" -> (2, (3,1))
-// Returns (degree, coefficient)
 fn parse_x_term(pair: Pair<Rule>) -> (usize, (i32, i32)) {
     let mut coeff = (0, 1);
     let mut degree = 0;
@@ -112,7 +103,7 @@ fn parse_x_term(pair: Pair<Rule>) -> (usize, (i32, i32)) {
             Rule::x_p => {
                 has_xp = true;
                 let mut x_inner = item.into_inner();
-                x_inner.next(); // "x"
+                x_inner.next(); 
                 if let Some(pow) = x_inner.next() {
                     degree = pow.as_str().parse().unwrap();
                 } else {
@@ -130,7 +121,6 @@ fn parse_x_term(pair: Pair<Rule>) -> (usize, (i32, i32)) {
     (degree, coeff)
 }
 
-// Returns a polynomial as a list of coefficients
 fn parse_x_expr(pairs: Pairs<Rule>) -> Vec<(i32, i32)> {
     let mut poly = std::collections::BTreeMap::new();
     let mut current_sign = 1;
@@ -143,9 +133,8 @@ fn parse_x_expr(pairs: Pairs<Rule>) -> Vec<(i32, i32)> {
                 }
             }
             Rule::x_term => {
-                let (degree, (n, d)) = parse_x_term(pair);
+                let (degree, (n, _d)) = parse_x_term(pair);
                 let (num, _den) = poly.entry(degree).or_insert((0, 1));
-                // This is a simplification. A proper fraction addition is needed.
                 *num += n * current_sign;
                 current_sign = 1;
             }
@@ -169,7 +158,6 @@ fn parse_x_expr(pairs: Pairs<Rule>) -> Vec<(i32, i32)> {
     result
 }
 
-// Parses an 'exponent' rule to extract the coefficient of x.
 fn parse_exponent(pair: Pair<Rule>) -> (i32, i32) {
     let mut inner = pair.into_inner();
     let mut sign = 1;
@@ -205,10 +193,10 @@ fn parse_fx(fx_pair: Pair<Rule>) -> Vec<serde_json::Value> {
     let mut forcing_terms = vec![];
 
     let mut sign = 1;
-    let mut poly = vec![(1, 1)]; // Default to 1 for polynomials
+    let mut poly = vec![(1, 1)];
     let mut alpha = (0, 1);
 
-    let mut inner = fx_pair.into_inner(); // Get children of fx_pair (which is Rule::fx)
+    let mut inner = fx_pair.into_inner(); 
 
     let first_child = inner.peek().unwrap();
     if first_child.as_rule() == Rule::sign {
@@ -217,7 +205,7 @@ fn parse_fx(fx_pair: Pair<Rule>) -> Vec<serde_json::Value> {
         }
     }
 
-    let actual_term_pair = inner.next().unwrap(); // The actual x_block, exp_func, or x_expr
+    let actual_term_pair = inner.next().unwrap();
 
     let mut x_block_opt: Option<Pair<Rule>> = None;
     let mut exp_func_opt: Option<Pair<Rule>> = None;
@@ -225,7 +213,6 @@ fn parse_fx(fx_pair: Pair<Rule>) -> Vec<serde_json::Value> {
     match actual_term_pair.as_rule() {
         Rule::x_block => {
             x_block_opt = Some(actual_term_pair);
-            // Check if there's an exp_func after the x_block (e.g., P(x)exp(ax))
             if let Some(next_pair) = inner.next() {
                 if next_pair.as_rule() == Rule::exp_func {
                     exp_func_opt = Some(next_pair);
@@ -234,7 +221,6 @@ fn parse_fx(fx_pair: Pair<Rule>) -> Vec<serde_json::Value> {
         }
         Rule::exp_func => {
             exp_func_opt = Some(actual_term_pair);
-            // Check if there's an x_block after the exp_func (e.g., exp(ax)P(x))
             if let Some(next_pair) = inner.next() {
                 if next_pair.as_rule() == Rule::x_block {
                     x_block_opt = Some(next_pair);
@@ -264,12 +250,9 @@ fn parse_fx(fx_pair: Pair<Rule>) -> Vec<serde_json::Value> {
         }
     }
 
-    // Apply the sign to the first non-zero coefficient of the polynomial
-    // If poly is all zeros, the sign applies to alpha if alpha is non-zero (exp_func only case).
     if let Some(first_coeff) = poly.iter_mut().find(|(n, _d)| *n != 0) {
         first_coeff.0 *= sign;
     } else if alpha != (0, 1) {
-        // Only exp_func with no poly, like -exp(x)
         alpha.0 *= sign;
     }
 

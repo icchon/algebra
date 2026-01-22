@@ -19,7 +19,6 @@ impl ExprParser for LinearEParser {
 
 #[derive(Debug)]
 enum LinearEParseError {
-    // InvalidSyntax(String),
     DuplicateDegree,
 }
 

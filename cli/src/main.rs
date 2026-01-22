@@ -1,8 +1,8 @@
-mod engine; // engine.rs をモジュールとして宣言
+mod engine;
 mod parser;
-mod session; // session.rs をモジュールとして宣言
+mod session;
 
-use session::Session; // Session 構造体を使用
+use session::Session;
 
 fn main() {
     if let Err(e) = run() {
@@ -10,7 +10,6 @@ fn main() {
     }
 }
 
-// Command と CommandParseError enum は変更なし
 enum Command {
     Help,
     Exit,
@@ -77,7 +76,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     match Session::new(&mode_name) {
                         Ok(new_session) => {
                             session = new_session;
-                            // println!("Switched to '{}' mode.", session.parser.name());
                         }
                         Err(e) => eprintln!("Failed to switch mode: {}", e),
                     }

@@ -21,5 +21,7 @@ fmt:
 clean:
 	rm -rf $(CLI) $(ENGINE)
 
-re: clean all
+build:
+	docker-compose run --rm builder
 
+re: clean all

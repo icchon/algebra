@@ -1,4 +1,3 @@
-use pest::Parser;
 use pest::iterators::{Pair, Pairs};
 use pest_derive::Parser;
 use serde_json::json;
@@ -9,7 +8,6 @@ use super::ExprParser;
 #[grammar = "BNF/integral.pest"]
 pub struct IntegralParser;
 
-// --- Reusable helpers from linear_de (or similar) ---
 
 fn parse_coeff(pair: Pair<Rule>) -> (i32, i32) {
     let mut numbers = pair.into_inner();
@@ -66,7 +64,6 @@ fn parse_x_expr(pairs: Pairs<Rule>) -> serde_json::Value {
             Rule::x_term => {
                 let (degree, (n, d)) = parse_x_term(pair);
                 let (num, den) = poly.entry(degree).or_insert((0, 1));
-                // Proper fraction addition needed here. Simplified for now.
                 *num += n * current_sign;
                 *den = d;
                 current_sign = 1;
@@ -90,7 +87,6 @@ fn parse_x_expr(pairs: Pairs<Rule>) -> serde_json::Value {
     json!(result)
 }
 
-// --- New parsers for integral ---
 
 fn parse_x_block_as_poly(pair: Pair<Rule>) -> serde_json::Value {
     let inner = pair.into_inner().next().unwrap();
@@ -142,7 +138,6 @@ fn parse_term(pair: Pair<Rule>, sign: i32) -> serde_json::Value {
         parse_frac_expr_as_rational_poly,
     );
 
-    // Apply the sign to the first non-zero numerator coefficient of frac_expr_part
     if let Some(num_coeffs) = frac_expr_part
         .get_mut("num")
         .and_then(|n| n.as_array_mut())
@@ -157,7 +152,6 @@ fn parse_term(pair: Pair<Rule>, sign: i32) -> serde_json::Value {
                 }
             }
         } else if let Some(first_elem) = num_coeffs.get_mut(0) {
-            // If all coeffs are zero, apply to the first one (e.g. sign on a zero poly)
             if let Some(n) = first_elem.get(0).and_then(|v| v.as_i64()) {
                 if let Some(val) = first_elem.get_mut(0) {
                     *val = json!(n * sign as i64);

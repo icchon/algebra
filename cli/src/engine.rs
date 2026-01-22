@@ -1,11 +1,9 @@
 use std::fs;
 use std::io::{self, BufRead, BufReader, Write};
 use std::os::unix::fs::PermissionsExt;
-use std::process::{self, Child, Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread;
 
-// 計算を担当するエンジンの実行可能ファイルへのパス。
-// このパスは実際の環境に合わせて修正する必要がある。
 const ENGINE_EXECUTABLE: &str = "./algebra";
 
 pub struct Engine {
@@ -81,7 +79,7 @@ impl Engine {
                     // eprintln!("[cli debug] read_line read {} bytes.", n);
                     n
                 }
-                Err(e) => {
+                Err(_e) => {
                     // eprintln!("[cli debug] read_line returned an error: {}", e);
                     break;
                 }

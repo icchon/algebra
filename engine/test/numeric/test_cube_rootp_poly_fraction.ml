@@ -17,7 +17,7 @@ let test () =
 
   let test_case_with_factors f_name f factors =
     R.subsection f_name;
-    eprintf "Processing: %s...\n%!" f_name;
+    (* eprintf "Processing: %s...\n%!" f_name; *)
     let p, q = f in
     let p_str = poly_ts p in
     let q_str = poly_ts q in
@@ -74,7 +74,7 @@ let test () =
     R.eq (sprintf {| \int \frac{%s}{%s} dx |} p_str q_str) full_res_str |> R.adds;
 
     R.text "Verification: Result is computed algebraically." |> R.adds;
-    eprintf "Completed: %s\n%!" f_name
+    (* eprintf "Completed: %s\n%!" f_name *)
   in
 
   (* 1. Complex Hermite: deg 4 / deg 5 *)
