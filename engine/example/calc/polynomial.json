@@ -1,0 +1,13 @@
+{
+  "expression": {
+    "op": "add",
+    "lhs": {
+      "type": "polynomial",
+      "value": [[1, 1], [2, 1]]
+    },
+    "rhs": {
+      "type": "polynomial",
+      "value": [[3, 1], [4, 1]]
+    }
+  }
+}

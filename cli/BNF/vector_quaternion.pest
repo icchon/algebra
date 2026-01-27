@@ -1,0 +1,15 @@
+
+
+number = @{ ASCII_DIGIT+ }
+base   = { "i" | "j" | "k" }
+term   = { number ~ base | number | base }
+quaternion = { sign? ~ term ~ (sign ~ term)* }
+
+vector_in = { quaternion ~ ( "," ~ quaternion)* }
+vector = {"[" ~ vector_in ~ "]" }
+
+binary_expr = { sign? ~ vector ~ op ~ vector }
+expr = { SOI ~ binary_expr ~ EOI }
+sign = { "+" | "-" }
+op   = { "+" | "-" }
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

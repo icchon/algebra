@@ -1,0 +1,6 @@
+{
+    "mode": "Calculator",
+    "algebra": {
+        "kind": "Polynomial"
+    }
+}

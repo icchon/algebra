@@ -1,0 +1,16 @@
+number = @{ ASCII_DIGIT+ }
+base   = { "i" | "j" | "k" }
+term   = { number ~ base | number | base }
+quaternion = { sign? ~ term ~ (sign ~ term)* }
+
+add = { "+" }
+sub = { "-" }
+mul = { "*" }
+div = { "/" }
+
+expr = { SOI ~ binary_expr ~ EOI }
+binary_expr = { primary ~ ( (add | sub | mul | div) ~ primary )* }
+primary = { "(" ~ binary_expr ~ ")" | quaternion }
+
+sign = { "+" | "-" }
+WHITESPACE = _ { " " | "\t" | "\r" | "\n" }

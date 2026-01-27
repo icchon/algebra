@@ -1,6 +1,6 @@
 use crate::engine::Engine;
 use crate::parser::{
-    ExprParser, integral::IntegralParser, linear_de::LinearDEParser, linear_e::LinearEParser,
+    poly::PolyParser, quaternion::QuaternionParser, ExprParser, integral::IntegralParser, linear_de::LinearDEParser, linear_e::LinearEParser,
     none::NotImplementedParser,
 };
 
@@ -15,6 +15,8 @@ impl Session {
             "linear" => (Box::new(LinearEParser), "./settings/linear_e.json"),
             "linear_de" => (Box::new(LinearDEParser), "./settings/linear_de.json"),
             "integral" => (Box::new(IntegralParser), "./settings/integral.json"),
+            "quat" => (Box::new(QuaternionParser), "./settings/quaternion.json"),
+            "poly" => (Box::new(PolyParser), "./settings/poly_rat.json"),
             "none" => (Box::new(NotImplementedParser), "./settings/none.json"),
             _ => return Err(format!("Unknown mode: {}", mode).into()),
         };

@@ -83,5 +83,5 @@ struct
   let inv x =
     let a, b = x in
     let n_sq = S.add (M.norm_sq a) (M.norm_sq b) in
-    div_scale x n_sq
+    div_scale (C.conj x) n_sq
 end

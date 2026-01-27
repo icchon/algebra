@@ -1,0 +1,13 @@
+{
+  "expression": {
+    "op": "add",
+    "lhs": {
+      "type": "quaternion",
+      "value": [[1, 1], [2, 1], [0, 1], [0, 1]]
+    },
+    "rhs": {
+      "type": "quaternion",
+      "value": [[3, 1], [0, 1], [4, 1], [0, 1]]
+    }
+  }
+}

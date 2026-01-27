@@ -1,4 +1,4 @@
 (executable
  (name main)
- (modules main path_resolver)
+ (modules main path_resolver calculator_runner)
  (libraries yojson str types unix))

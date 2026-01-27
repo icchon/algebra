@@ -42,7 +42,7 @@ fn parse_line(line: &str) -> Result<Command, CommandParseError> {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut rl = rustyline::DefaultEditor::new()?;
 
-    let mut session = Session::new("linear")?;
+    let mut session = Session::new("quat")?;
 
     loop {
         let prompt = format!("[{}] >> ", session.parser.name());
@@ -69,8 +69,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     break;
                 }
                 Command::Help => {
-                    println!("Available modes: linear, none, (calc, integrate, diff coming soon)");
-                    println!("Commands: help, exit, switch <mode>");
+                    println!("Available modes: linear, linear_de, integral, quat, poly, none");
+                    println!("Commands: help, exit, mode <mode>");
                 }
                 Command::Switch(mode_name) => {
                     match Session::new(&mode_name) {
@@ -84,7 +84,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     match session.parser.parse(&expr) {
                         Ok(parsed_data) => {
                             let line = parsed_data.lines().map(|s| s.trim()).collect::<String>();   
-                            // println!("{}", line);
+                            println!("[debug] Sending to engine: {}", line);
                             let result = session.engine.query(&line);
                             println!("\n\n{}\n\n", result);
                         }

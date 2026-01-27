@@ -2,14 +2,20 @@ open Yojson.Safe.Util
 open Path_resolver
 open Unix
 
+(* ヘルパー: Yojsonから有理数のペア (int * int) をデコード *)
+let decode_rational_pair json =
+  let l = Yojson.Safe.Util.to_list json in
+  (Yojson.Safe.Util.to_int (List.nth l 0), Yojson.Safe.Util.to_int (List.nth l 1))
+
+(* ヘルパー: YojsonからTypes.Rational.t をデコード *)
+
+
 (* LinearE Implementation *)
 module LinearE = struct
   type coeff = int * int
 
   (* [n; d] -> (n, d) *)
-  let decode_coeff json =
-    let l = to_list json in
-    (to_int (List.nth l 0), to_int (List.nth l 1))
+  let decode_coeff = decode_rational_pair
 
   (* { left: [...], right: [...] } -> (left_coeffs, right_coeffs) *)
   let decode_input json =
@@ -79,12 +85,14 @@ let read_json_from_input () =
         close_in ic;
         Some (Yojson.Safe.from_string content)
   else
-    (* Piped input: read one line from stdin *)
+    (* Piped input: read the first JSON object from the stream *)
     try
-      let line = read_line () in
-      if String.trim line = "" then None
-      else Some (Yojson.Safe.from_string line)
-    with End_of_file -> None
+      let ic = Unix.in_channel_of_descr stdin in
+      let seq = Yojson.Safe.seq_from_channel ic in
+      match Seq.uncons seq with
+      | Some (json, _) -> Some json
+      | None -> None
+    with _ -> None
 
 let smart_join parts =
   let filtered = List.filter (fun s -> let s = String.trim s in s <> "" && s <> "0") parts in
@@ -194,9 +202,7 @@ module LinearDE = struct
   module Poly = Types.Rootp_poly_fraction.RootP_polynomial
   module C = Types.Q_cube_rootp.CubicNumber
 
-  let decode_rational json =
-    let l = to_list json in
-    (to_int (List.nth l 0), to_int (List.nth l 1))
+  let decode_rational = decode_rational_pair
 
   let decode_rootp json =
     let r = decode_rational json in
@@ -302,9 +308,7 @@ module Integral = struct
     | IExp of Types.Rootp_frac_exp.term
     | ILog of (Frac.t * Poly.t)
 
-  let decode_rational json =
-    let l = to_list json in
-    (to_int (List.nth l 0), to_int (List.nth l 1))
+  let decode_rational = decode_rational_pair
   
   let decode_rootp json =
     let r = decode_rational json in
@@ -434,8 +438,8 @@ module Integral = struct
                         "& " ^ s
                     else
                         "& + " ^ s
-                ) |> String.concat " \\\\ " in
-                if rest = "" then hd else hd ^ " \\\\ " ^ rest
+                ) |> String.concat " \\ \\ " in
+                if rest = "" then hd else hd ^ " \\ \\ " ^ rest
             in
             
             let full_tex =
@@ -443,7 +447,7 @@ module Integral = struct
               if non_elem_integrand <> [] then
                 let integrand_str = String.concat " + " non_elem_integrand in
                 if elementary_part = "0" then Printf.sprintf "\\int %s dx" integrand_str
-                else elementary_part ^ " \\\\ & + \\int " ^ integrand_str ^ " dx"
+                else elementary_part ^ " \\ \\ & + \\int " ^ integrand_str ^ " dx"
               else
                 elementary_part
             in
@@ -479,4 +483,20 @@ let () =
   | "LinearE" -> LinearERunner.run ()
   | "LinearDE" -> LinearDE.run ()
   | "Integral" | "integral" -> Integral.run ()
+  | "Calculator" ->
+      let algebra_json = settings_json |> member "algebra" in
+      let kind = algebra_json |> member "kind" |> to_string in
+      let module Runner =
+        ( val (
+            match kind with
+            | "Quaternion" ->
+                (module Calculator_runner.Make (Types.Quaternion_algebra.Quaternion_algebra)
+                  : Calculator_runner.RUNNER)
+            | "Polynomial" | "Fraction" ->
+                (module Calculator_runner.Make (Types.Rational_function_algebra.Rational_function_algebra)
+                  : Calculator_runner.RUNNER)
+            | _ -> failwith ("Unsupported algebra kind: " ^ kind)
+        ) )
+      in
+      Runner.run ()
   | _ -> failwith ("Unsupported mode: " ^ mode_str)

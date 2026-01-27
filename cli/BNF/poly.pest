@@ -1,0 +1,18 @@
+add = { "+" }
+sub = { "-" }
+mul = { "*" }
+div = { "/" }
+
+number = @{ ASCII_DIGIT+ }
+var    = { "x" | "X" }
+coeff  = { number ~ ("/" ~ number)? }
+power  = { var ~ ("^" ~ number)? }
+term   = { coeff ~ power | power | coeff }
+
+polynomial = { sign? ~ term ~ ((add | sub) ~ term)* }
+
+primary = { "(" ~ binary_expr ~ ")" | polynomial }
+binary_expr = { primary ~ ((add | sub | mul | div) ~ primary)* }
+expr = { SOI ~ binary_expr ~ EOI }
+sign = { "+" | "-" }
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

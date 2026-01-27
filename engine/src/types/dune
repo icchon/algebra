@@ -3,4 +3,5 @@
 (library
  (name types)
  (modules :standard)
+ (modules_without_implementation calculator_algebra)
  (libraries str yojson))
