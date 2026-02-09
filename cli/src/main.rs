@@ -42,7 +42,7 @@ fn parse_line(line: &str) -> Result<Command, CommandParseError> {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut rl = rustyline::DefaultEditor::new()?;
 
-    let mut session = Session::new("quat")?;
+    let mut session = Session::new("linear")?;
 
     loop {
         let prompt = format!("[{}] >> ", session.parser.name());

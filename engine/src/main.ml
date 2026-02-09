@@ -489,11 +489,8 @@ let () =
       let module Runner =
         ( val (
             match kind with
-            | "Quaternion" ->
-                (module Calculator_runner.Make (Types.Quaternion_algebra.Quaternion_algebra)
-                  : Calculator_runner.RUNNER)
-            | "Polynomial" | "Fraction" ->
-                (module Calculator_runner.Make (Types.Rational_function_algebra.Rational_function_algebra)
+            | "Expression" | "Quaternion" | "Polynomial" | "Fraction" ->
+                (module Calculator_runner.Make (Types.Expression.ExpressionField)
                   : Calculator_runner.RUNNER)
             | _ -> failwith ("Unsupported algebra kind: " ^ kind)
         ) )

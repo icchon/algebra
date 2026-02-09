@@ -1,7 +1,6 @@
 (include_subdirs unqualified)
 
-(library
+ (library
  (name types)
- (modules :standard)
- (modules_without_implementation calculator_algebra)
+ (modules :standard expression calculator_field)
  (libraries str yojson))
