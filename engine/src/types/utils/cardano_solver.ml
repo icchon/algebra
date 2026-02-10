@@ -8,10 +8,10 @@ let solve_quadratic_raw a b c =
   let disc = Rat.sub (Rat.mul b b) (Rat.mul (4, 1) (Rat.mul a c)) in
   let s_disc = Q.make_root_rat disc in
   let neg_s_disc = Q.neg s_disc in
-  Printf.eprintf "[debug] s_disc: %s, neg_s_disc: %s\n" (Q.to_string s_disc) (Q.to_string neg_s_disc);
+  (* Printf.eprintf "[debug] s_disc: %s, neg_s_disc: %s\n" (Q.to_string s_disc) (Q.to_string neg_s_disc); *)
   let r1 = Q.div (Q.add (Q.make_rational (Rat.neg b)) s_disc) (Q.make_rational (Rat.mul (2, 1) a)) in
   let r2 = Q.div (Q.add (Q.make_rational (Rat.neg b)) neg_s_disc) (Q.make_rational (Rat.mul (2, 1) a)) in
-  Printf.eprintf "[debug] Quadratic r1: %s, r2: %s\n" (Q.to_string r1) (Q.to_string r2);
+  (* Printf.eprintf "[debug] Quadratic r1: %s, r2: %s\n" (Q.to_string r1) (Q.to_string r2); *)
   Stdlib.flush Stdlib.stderr;
   let res = List.map C.of_q_rootp [ r1; r2 ] in
   res

@@ -1,13 +1,10 @@
-
-
 ENGINE := algebra
 CLI := alsh
 
-
-all: $(CLI)
+all: $(CLI) $(ENGINE)
 
 $(ENGINE): 
-	cd engine && dune build 
+	cd engine && dune build
 	cp ./engine/_build/default/src/main.exe ./algebra
 
 $(CLI): $(ENGINE)

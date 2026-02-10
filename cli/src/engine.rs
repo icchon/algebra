@@ -39,7 +39,7 @@ impl Engine {
             Some(thread::spawn(move || {
                 let reader = BufReader::new(stderr);
                 for line in reader.lines() {
-                    eprintln!("[engine stderr] {}", line.unwrap_or_else(|e| e.to_string()));
+                    // eprintln!("[engine stderr] {}", line.unwrap_or_else(|e| e.to_string()));
                 }
             }))
         } else {
