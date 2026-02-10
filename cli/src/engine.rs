@@ -8,6 +8,7 @@ const ENGINE_EXECUTABLE: &str = "./algebra";
 
 pub struct Engine {
     child: Child,
+    stderr_thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Engine {
@@ -34,16 +35,18 @@ impl Engine {
             .stderr(Stdio::piped())
             .spawn()?;
 
-        if let Some(stderr) = child.stderr.take() {
-            thread::spawn(move || {
+        let stderr_thread = if let Some(stderr) = child.stderr.take() {
+            Some(thread::spawn(move || {
                 let reader = BufReader::new(stderr);
                 for line in reader.lines() {
                     eprintln!("[engine stderr] {}", line.unwrap_or_else(|e| e.to_string()));
                 }
-            });
-        }
+            }))
+        } else {
+            None
+        };
         
-        Ok(Engine { child })
+        Ok(Engine { child, stderr_thread })
     }
 
     pub fn query(&mut self, input: &str) -> String {
@@ -104,5 +107,8 @@ impl Engine {
 impl Drop for Engine {
     fn drop(&mut self) {
         let _ = self.child.kill();
+        if let Some(handle) = self.stderr_thread.take() {
+            let _ = handle.join();
+        }
     }
 }

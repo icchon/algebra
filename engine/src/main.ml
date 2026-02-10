@@ -1,6 +1,7 @@
 open Yojson.Safe.Util
 open Path_resolver
 open Unix
+open Printf
 
 (* ヘルパー: Yojsonから有理数のペア (int * int) をデコード *)
 let decode_rational_pair json =
@@ -149,6 +150,9 @@ module LinearERunner = struct
           (try
             let (left, right) = LinearE.decode_input json in
             let solutions = LinearE.solve left right in
+            
+            eprintf "[debug] Cardano solutions: [%s]\n" (String.concat "; " (List.map Types.Q_cube_rootp.to_string solutions));
+            flush Stdlib.stderr;
             
             let left_latex = coeffs_to_latex left in
             let right_latex = coeffs_to_latex right in

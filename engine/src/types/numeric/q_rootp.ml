@@ -329,45 +329,82 @@ module DynamicNumber = struct
     in
     check 0 0
 
-  let to_string_latex x =
-    let terms_list = ref [] in
-    CoeffMap.iter
-      (fun b c ->
-        let c_str = RationalField.to_string_latex c in
-        let elements = PrimeSet.elements b in
-        let has_i = List.mem (-1) elements in
-        let primes = List.filter (fun x -> x <> -1) elements in
-        let i_str = if has_i then "i" else "" in
-        let root_str =
-          if primes = [] then ""
-          else
-            let product = List.fold_left ( * ) 1 primes in
-            "\\sqrt{" ^ string_of_int product ^ "}"
-        in
-        let b_str = i_str ^ root_str in
-        let term =
-          match b_str with
-          | "" -> c_str
-          | _ ->
-              if c_str = "1" then b_str
-              else if c_str = "-1" then "-" ^ b_str
-              else if is_atomic c_str then c_str ^ b_str
-              else "(" ^ c_str ^ ")" ^ b_str
-        in
-        terms_list := term :: !terms_list)
-      x.terms;
-    match List.rev !terms_list with
-    | [] -> "0"
-    | hd :: tl ->
-        List.fold_left
-          (fun acc t ->
-            if String.length t > 0 && t.[0] = '-' then
-              acc ^ " - " ^ String.sub t 1 (String.length t - 1)
-            else acc ^ " + " ^ t)
-          hd tl
+    let to_string_latex x =
 
-  let conj x = x
-  let to_string _ = "not implemented"
+      let terms_list = ref [] in
+
+      CoeffMap.iter
+
+        (fun b c ->
+
+          let is_neg_coeff = RationalField.is_negative c in (* ここで符号を判定 *)
+
+          let abs_c = if is_neg_coeff then RationalField.neg c else c in (* 絶対値を取得 *)
+
+          let c_str_abs = RationalField.to_string_latex abs_c in (* 絶対値の文字列を取得 *)
+
+          let elements = PrimeSet.elements b in
+
+          let has_i = List.mem (-1) elements in
+
+          let primes = List.filter (fun x -> x <> -1) elements in
+
+          let i_str = if has_i then "i" else "" in
+
+          let root_str =
+
+            if primes = [] then ""
+
+            else
+
+              let product = List.fold_left ( * ) 1 primes in
+
+              "\\sqrt{" ^ string_of_int product ^ "}"
+
+          in
+
+          let b_str = i_str ^ root_str in
+
+          let term_str =
+
+            match b_str with
+
+            | "" -> c_str_abs (* 係数のみの場合 *)
+
+            | _ ->
+
+                if c_str_abs = "1" then b_str
+
+                else if is_atomic c_str_abs then c_str_abs ^ b_str
+
+                else "(" ^ c_str_abs ^ ")" ^ b_str
+
+          in
+
+          terms_list := (is_neg_coeff, term_str) :: !terms_list) (* (符号, 項の文字列) のタプルで保存 *)
+
+        x.terms;
+
+      match List.rev !terms_list with
+
+      | [] -> "0"
+
+      | (hd_is_neg, hd_term) :: tl ->
+
+          let first_term = if hd_is_neg then "-" ^ hd_term else hd_term in
+
+          List.fold_left
+
+            (fun acc (is_neg, t) ->
+
+              if t = "0" then acc
+
+              else if is_neg then acc ^ " - " ^ t
+
+              else acc ^ " + " ^ t)
+
+            first_term tl  let conj x = x
+  let to_string x = to_string_latex x
 
   let compare x y = CoeffMap.compare RationalField.compare x.terms y.terms
 

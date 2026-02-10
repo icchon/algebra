@@ -22,7 +22,11 @@ struct
   let v x = normalize x
   let zero = (Coeff.zero, Coeff.one)
   let one = (Coeff.one, Coeff.one)
-  let neg (n, d) = (Coeff.neg n, d)
+  let neg (n, d) = 
+    let neg_n = Coeff.neg n in
+    Printf.eprintf "[debug] Fraction.neg: negating %s/%s to %s/%s\n" 
+      (Coeff.to_string n) (Coeff.to_string d) (Coeff.to_string neg_n) (Coeff.to_string d);
+    (neg_n, d)
   let conj (n, d) = normalize (Coeff.conj n, Coeff.conj d)
 
   let derive (n, d) =
