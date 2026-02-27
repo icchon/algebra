@@ -345,13 +345,19 @@ module CubicNumber = struct
       x.terms;
     match List.rev !items with
     | [] -> "0"
-    | hd :: tl ->
-        List.fold_left
-          (fun acc t ->
-            if String.length t > 0 && t.[0] = '-' then
-              acc ^ " - " ^ String.sub t 1 (String.length t - 1)
-            else acc ^ " + " ^ t)
-          hd tl
+    | terms ->
+        let s =
+          List.fold_left
+            (fun acc t ->
+              if String.length acc > 0 then
+                if String.length t > 0 && t.[0] = '-' then
+                  acc ^ " - " ^ String.sub t 1 (String.length t - 1)
+                else acc ^ " + " ^ t
+              else t)
+            "" terms
+        in
+        if String.length s > 0 && s.[0] = '+' then String.sub s 1 (String.length s - 1) else s
+
 
   let equal x y = CubicBasisMap.equal Q_rootp.equal x.terms y.terms
 

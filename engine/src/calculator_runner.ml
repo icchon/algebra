@@ -21,7 +21,7 @@ module Make (A : Calculator_field.S) = struct
     flush Stdlib.stdout
 
   let wrap_align content =
-    Printf.sprintf "\\begin{align*}\n%s\n\\end{align*}\"" content
+    Printf.sprintf "\\begin{align*}\n%s\n\\end{align*}" content
 
   let read_json_from_input () =
     if Unix.isatty Unix.stdin then
@@ -55,7 +55,7 @@ module Make (A : Calculator_field.S) = struct
             let result = A.eval expr in 
             let lhs_latex = A.to_string_latex expr in 
             let rhs_latex = A.to_string_latex result in 
-            let equation = sprintf "%s = %s" lhs_latex rhs_latex in 
+            let equation = sprintf "%s &= %s" lhs_latex rhs_latex in 
             print_full_latex (wrap_align equation)
           with e -> 
             print_full_latex (Printf.sprintf "Error: %s" (Printexc.to_string e)))

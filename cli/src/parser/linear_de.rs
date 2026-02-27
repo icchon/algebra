@@ -174,11 +174,15 @@ fn parse_exponent(pair: Pair<Rule>) -> (i32, i32) {
         first
     };
 
-    for p in term_pair.into_inner() {
-        match p.as_rule() {
-            Rule::coeff => coeff = parse_coeff(p),
-            Rule::x => has_x = true,
-            _ => (),
+    if term_pair.as_rule() == Rule::x {
+        has_x = true;
+    } else {
+        for p in term_pair.into_inner() {
+            match p.as_rule() {
+                Rule::coeff => coeff = parse_coeff(p),
+                Rule::x => has_x = true,
+                _ => (),
+            }
         }
     }
 
@@ -189,6 +193,14 @@ fn parse_exponent(pair: Pair<Rule>) -> (i32, i32) {
     (coeff.0 * sign, coeff.1)
 }
 
+fn parse_sign(pair: Pair<Rule>) -> i32 {
+    if pair.as_str() == "-" {
+        -1
+    } else {
+        1
+    }
+}
+
 fn parse_fx(fx_pair: Pair<Rule>) -> Vec<serde_json::Value> {
     let mut forcing_terms = vec![];
 
@@ -196,46 +208,49 @@ fn parse_fx(fx_pair: Pair<Rule>) -> Vec<serde_json::Value> {
     let mut poly = vec![(1, 1)];
     let mut alpha = (0, 1);
 
-    let mut inner = fx_pair.into_inner(); 
+    let fx_pair_rule = fx_pair.as_rule(); // fx
 
-    let first_child = inner.peek().unwrap();
-    if first_child.as_rule() == Rule::sign {
-        if inner.next().unwrap().as_str() == "-" {
-            sign = -1;
-        }
+    let mut inner_pairs = fx_pair.into_inner();
+    let mut current_pair = inner_pairs.next().unwrap();
+
+    // サインがある場合
+    if current_pair.as_rule() == Rule::sign {
+        sign = parse_sign(current_pair);
+        current_pair = inner_pairs.next().unwrap(); // 次の項に移動
     }
-
-    let actual_term_pair = inner.next().unwrap();
 
     let mut x_block_opt: Option<Pair<Rule>> = None;
     let mut exp_func_opt: Option<Pair<Rule>> = None;
 
-    match actual_term_pair.as_rule() {
+    match current_pair.as_rule() {
         Rule::x_block => {
-            x_block_opt = Some(actual_term_pair);
-            if let Some(next_pair) = inner.next() {
+            x_block_opt = Some(current_pair);
+            if let Some(next_pair) = inner_pairs.next() {
                 if next_pair.as_rule() == Rule::exp_func {
                     exp_func_opt = Some(next_pair);
                 }
             }
         }
         Rule::exp_func => {
-            exp_func_opt = Some(actual_term_pair);
-            if let Some(next_pair) = inner.next() {
+            exp_func_opt = Some(current_pair); // ここで exp_func_opt を設定する
+            if let Some(next_pair) = inner_pairs.next() {
                 if next_pair.as_rule() == Rule::x_block {
                     x_block_opt = Some(next_pair);
                 }
             }
         }
         Rule::x_expr => {
-            poly = parse_x_expr(actual_term_pair.into_inner());
+            poly = parse_x_expr(current_pair.into_inner());
         }
-        _ => (),
+        _ => panic!("Unexpected rule in fx: {:?}", current_pair.as_rule()), // 想定外のルールが来た場合
     }
 
     if let Some(exp_pair) = exp_func_opt {
         let exponent_pair = exp_pair.into_inner().next().unwrap();
         alpha = parse_exponent(exponent_pair);
+        if alpha != (1,1) {
+            panic!("ERROR: alpha was not (1,1) for exp(x), instead it was {:?}", alpha);
+        }
     }
 
     if let Some(xb_pair) = x_block_opt {

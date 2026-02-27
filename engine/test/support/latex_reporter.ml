@@ -37,13 +37,13 @@ let text s = sprintf "%s\\\\" s
 
 (* let eq left_latex right_latex = sprintf "\\[ %s = %s \\]" left_latex right_latex *)
 let eq left_latex right_latex =
-  sprintf "\\begin{dmath*}\n %s = %s \n\\end{dmath*}" left_latex right_latex
+  sprintf "\\begin{align*}\n %s &= %s \n\\end{align*}" left_latex right_latex
 
 let neq left_latex right_latex =
-  sprintf "\\[ %s \\neq %s \\]" left_latex right_latex
+  sprintf "\\begin{align*}\n %s &\\neq %s \n\\end{align*}" left_latex right_latex
 
 let op left_latex op right_latex =
-  sprintf "\\[ %s %s %s \\]" left_latex op right_latex
+  sprintf "\\begin{align*}\n %s &%s %s \n\\end{align*}" left_latex op right_latex
 
 let add x y = sprintf "%s + %s" (paren_if_needed x) (paren_if_needed y)
 let sub x y = sprintf "%s - %s" (paren_if_needed x) (paren_if_needed y)
@@ -109,7 +109,7 @@ let linear_de coeffs rhs =
         (op ^ term) :: build (i - 1) false
   in
   let lhs = String.concat "" (build n true) in
-  sprintf "\\begin{dmath*}\n %s = %s \n\\end{dmath*}" (if lhs = "" then "0" else lhs) rhs
+  sprintf "\\begin{align*}\n %s &= %s \n\\end{align*}" (if lhs = "" then "0" else lhs) rhs
 (* latex_reporter.ml に以下を追加 *)
 
 (* 既存のコードに追加 *)
@@ -142,7 +142,7 @@ let exp x = sprintf "e^{%s}" x
 let log x = sprintf "\\log %s" x
 
 (* 複合演算の等式: 左辺 = 右辺 *)
-let eq_raw left right = sprintf "\\[ %s = %s \\]" left right
+let eq_raw left right = sprintf "\\begin{align*}\n %s &= %s \n\\end{align*}" left right
 
 let get_full_latex_document () =
   let header =
@@ -151,7 +151,6 @@ let get_full_latex_document () =
      \\usepackage{amsmath}\n\
      \\usepackage{amssymb}\n\
      \\usepackage{geometry}\n\
-     \\usepackage{breqn}\n\
      \\geometry{a4paper, margin=1in}\n\
      \\begin{document}\n"
   in

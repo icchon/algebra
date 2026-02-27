@@ -168,27 +168,25 @@ module LinearERunner = struct
             let combined = List.map2 sub l_pad r_pad in
             let norm_latex = coeffs_to_latex combined in
 
-            let solutions_line =
+            let solutions_lines =
               if solutions = [] then
                 let degree = List.length combined - 1 in
                 if degree > 3 then
-                  "\\implies \\text{not implemented for degree > 3}"
+                  ["\\implies & \\text{not implemented for degree > 3}"]
                 else
-                  "\\implies x \\in \\emptyset"
+                  ["\\implies & x \\in \\emptyset"]
               else
-                let sols_formatted = List.mapi (fun i sol ->
-                  Printf.sprintf "x_{ %d } = %s" (i + 1) (Types.Q_cube_rootp.to_string_latex sol)
-                ) solutions in
-                Printf.sprintf "\\implies \\left\\{ %s \\right\\}" (String.concat ", " sols_formatted)
+                List.mapi (fun i sol ->
+                  Printf.sprintf "%s x_{ %d } &= %s" (if i = 0 then "\\implies" else "\\phantom{\\implies}") (i + 1) (Types.Q_cube_rootp.to_string_latex sol)
+                ) solutions
             in
 
             let lines =
               if right_latex = "0" then
-                [ Printf.sprintf "%s &= 0" left_latex; solutions_line ]
+                (Printf.sprintf "%s &= 0" left_latex) :: solutions_lines
               else
                 [ Printf.sprintf "%s &= %s" left_latex right_latex;
-                  Printf.sprintf "\\iff %s &= 0" norm_latex;
-                  solutions_line ]
+                  Printf.sprintf "\\iff %s &= 0" norm_latex ] @ solutions_lines
             in
             
             print_full_latex (wrap_align (String.concat "\\\\\n" lines))
@@ -266,7 +264,11 @@ module LinearDE = struct
     let terms = List.map (fun {poly; alpha} ->
       let p_str = Poly.to_string_latex poly in
       let a_str = C.to_string_latex alpha in
-      let exp_part = if a_str = "0" then "" else if a_str = "1" then "e^x" else Printf.sprintf "e^{%sx}" a_str in
+      let exp_part =
+        if C.is_zero alpha then ""
+        else if C.is_one alpha then "e^x"
+        else Printf.sprintf "e^{%sx}" a_str
+ in
       if p_str = "0" then "0"
       else if p_str = "1" then (if exp_part = "" then "1" else exp_part)
       else if exp_part = "" then p_str
@@ -439,11 +441,11 @@ module Integral = struct
             | hd :: tl ->
                 let rest = tl |> List.map (fun s ->
                     if String.length s > 0 && s.[0] = '-' then
-                        "& " ^ s
+                        s
                     else
-                        "& + " ^ s
-                ) |> String.concat " \\ \\ " in
-                if rest = "" then hd else hd ^ " \\ \\ " ^ rest
+                        " + " ^ s
+                ) |> String.concat " " in
+                if rest = "" then hd else hd ^ " " ^ rest
             in
             
             let full_tex =
@@ -451,7 +453,7 @@ module Integral = struct
               if non_elem_integrand <> [] then
                 let integrand_str = String.concat " + " non_elem_integrand in
                 if elementary_part = "0" then Printf.sprintf "\\int %s dx" integrand_str
-                else elementary_part ^ " \\ \\ & + \\int " ^ integrand_str ^ " dx"
+                else elementary_part ^ " + \\int " ^ integrand_str ^ " dx"
               else
                 elementary_part
             in

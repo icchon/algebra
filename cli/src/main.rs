@@ -84,7 +84,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     match session.parser.parse(&expr) {
                         Ok(parsed_data) => {
                             let line = parsed_data.lines().map(|s| s.trim()).collect::<String>();   
-                            // println!("[debug] Sending to engine: {}", line);
+                            println!("[debug] Sending to engine: {}", line);
                             let result = session.engine.query(&line);
                             println!("\n\n{}\n\n", result);
                         }
