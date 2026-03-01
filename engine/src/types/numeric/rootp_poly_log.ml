@@ -22,7 +22,12 @@ let to_string_latex expr =
     List.map (fun (c, g) ->
       let c_str = RootP.to_string_latex c in
       let g_str = Poly.to_string_latex g in
-      sprintf {|%s \log \left( %s \right)|} c_str g_str
+      let c_display = 
+        if c_str = "1" then "" 
+        else if c_str = "-1" then "-" 
+        else c_str ^ " "
+      in
+      sprintf {|%s \log \left( %s \right)|} c_display g_str
     ) expr.log_part
   in
   let pl_str = 

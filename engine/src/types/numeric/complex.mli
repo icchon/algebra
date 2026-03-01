@@ -1,6 +1,6 @@
-type e = Rational.t
+type e = Q_rootp.t
 type t = e Container.Tup2.t
-type leaf = Rational.t
+type leaf = Q_rootp.t
 
 val equal : t -> t -> bool
 val compare : t -> t -> int
@@ -27,7 +27,7 @@ val div : t -> t -> t
 val flatten : t -> leaf list
 val derive : t -> t
 
-type s = Rational.t
+type s = Q_rootp.t
 
 val mul_scale : t -> s -> t
 val div_scale : t -> s -> t

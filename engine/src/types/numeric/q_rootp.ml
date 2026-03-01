@@ -403,7 +403,20 @@ module DynamicNumber = struct
 
               else acc ^ " + " ^ t)
 
-            first_term tl  let conj x = x
+            first_term tl  let to_string_latex_level _ x = to_string_latex x
+  let conj x =
+    let terms =
+      CoeffMap.fold
+        (fun basis coeff acc ->
+          if PrimeSet.mem (-1) basis then
+            CoeffMap.add basis (RationalField.neg coeff) acc
+          else CoeffMap.add basis coeff acc)
+        x.terms CoeffMap.empty
+    in
+    { terms }
+
+  let norm_sq x = mul x (conj x)
+
   let to_string x = to_string_latex x
 
   let compare x y = CoeffMap.compare RationalField.compare x.terms y.terms

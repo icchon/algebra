@@ -35,7 +35,7 @@ module BASE = struct
         include S
 
         let scale = S.mul
-        let norm_sq x = (S.norm_sq x, Rational.zero)
+        let norm_sq x = (S.norm_sq x, Q_rootp.zero)
       end)
 
   let v x = x
@@ -48,7 +48,7 @@ include BASE
 
 include
   Formatter.GenLinear
-    (Rational)
+    (Q_rootp)
     (struct
       type nonrec t = t
 

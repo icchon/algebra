@@ -3,14 +3,14 @@ module R = Latex_reporter
 module S = Complex
 
 (* Helper to create a rational number *)
-let r n d = (n, d)
+let r n d = Q_rootp.make_rational (n, d)
 
 (* Helper to create a complex number *)
 let c re im = (re, im)
 
 let test () =
   let ts = S.to_string_latex in
-  let r_ts = Rational.to_string_latex in
+  let r_ts = Q_rootp.to_string_latex in
 
   (* ADD *)
   let x, y = (c (r 1 2) (r 1 3), c (r 1 4) (r 1 5)) in

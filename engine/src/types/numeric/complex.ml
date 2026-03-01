@@ -1,11 +1,11 @@
 module BASE = struct
   module S = struct
-    include Rational
+    include Q_rootp
 
-    type leaf = Rational.t
+    type leaf = Q_rootp.t
 
     let flatten (x : t) : leaf list = [ x ]
-    let compare = Rational.compare
+    let compare = Q_rootp.compare
   end
 
   module CD =
@@ -43,7 +43,7 @@ include BASE
 
 include
   Formatter.GenLinear
-    (Rational)
+    (Q_rootp)
     (struct
       type nonrec t = t
 

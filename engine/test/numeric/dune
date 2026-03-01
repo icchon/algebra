@@ -23,6 +23,7 @@
   test_linear_de
   test_exponential
   test_logarithm
+  test_expression_rootp
   ;   test_sedenion
   )
  (modes byte)
@@ -219,6 +220,15 @@
    %{targets}
    (run ./test_logarithm.exe))))
 
+(rule
+ (targets test_expression_rootp.tex)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run ./test_expression_rootp.exe))))
+
 ; (rule
 ;  (targets test_sedenion.tex)
 ;  (mode
@@ -252,5 +262,6 @@
   test_linear_de.tex
   test_exponential.tex
   test_logarithm.tex
+  test_expression_rootp.tex
   ;   test_sedenion.tex
   ))

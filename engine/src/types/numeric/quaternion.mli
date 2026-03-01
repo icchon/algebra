@@ -1,6 +1,6 @@
 type e = Complex.t
 type t = e Container.Tup2.t
-type leaf = Rational.t
+type leaf = Q_rootp.t
 
 val equal : t -> t -> bool
 val compare : t -> t -> int

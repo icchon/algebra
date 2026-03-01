@@ -184,8 +184,14 @@ let integrate x =
   let rat_part_from_poly = BASE.v (s_int_poly, RootP_polynomial.one) in
   let rat_part_from_hermite, (rem_num, rem_den) = hermite_reduction r q in
   let logs = log_part_integration rem_num rem_den in
+  let remaining =
+    if logs = [] && not (RootP_polynomial.is_zero rem_num) then
+      (rem_num, rem_den)
+    else
+      BASE.zero
+  in
   {
     rational_part = BASE.add rat_part_from_poly rat_part_from_hermite;
     log_part = logs;
-    remaining_square_free = (rem_num, rem_den);
+    remaining_square_free = remaining;
   }

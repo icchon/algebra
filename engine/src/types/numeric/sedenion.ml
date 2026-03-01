@@ -9,7 +9,7 @@ include BASE
 
 include
   Formatter.GenLinear
-    (Rational)
+    (Q_rootp)
     (struct
       type nonrec t = t
 
